@@ -54,18 +54,18 @@ typedef struct {
 typedef struct {
 	/* LV2 ports */
 	float* a_in[4];
-	float* a_out[5];
+	float* a_out[4];
 
 	float* p_gain_in[4];
-	float* p_mix[16];
-	float* p_delay[8];
+	float* p_mix[12];
+	float* p_delay[7];
 	float* p_input[4];
 	float* p_trigger_chn;
 	float* p_trigger_mode;
 
 	double rate;
 	DelayLine dly_i[4];
-	DelayLine dly_o[4];
+	DelayLine dly_o[3];
 
 	int   mode_input[4];
 	float flt_z[4];
@@ -93,7 +93,6 @@ instantiate(
 	}
 
 	self->rate = rate;
-
 	self->flt_alpha = 1.0 - 5.0 / rate;
 
 	for (uint32_t i = 0; i < 4; ++i) {
@@ -101,9 +100,11 @@ instantiate(
 		self->flt_z[i] = 0;
 		self->flt_y[i] = 0;
 		memset(self->dly_i[i].buffer, 0, sizeof(float) * MAXDELAY);
-		memset(self->dly_o[i].buffer, 0, sizeof(float) * MAXDELAY);
 		self->gain_db[i] = 0.0;
 		self->gain_in[i] = 1.0;
+	}
+	for (uint32_t i = 0; i < 3; ++i) {
+		memset(self->dly_o[i].buffer, 0, sizeof(float) * MAXDELAY);
 	}
 
 	self->decoder = ltc_decoder_create(rate / 25, 8);
@@ -133,10 +134,10 @@ connect_port_mixtri(
 			else if (port >= MIXTRI_AUDIO_OUT_0 && port <= MIXTRI_AUDIO_OUT_T) {
 				self->a_out[port - MIXTRI_AUDIO_OUT_0] = (float*)data;
 			}
-			else if (port >= MIXTRI_MIX_0_0 && port <= MIXTRI_MIX_3_3) {
+			else if (port >= MIXTRI_MIX_0_0 && port <= MIXTRI_MIX_3_2) {
 				self->p_mix[port - MIXTRI_MIX_0_0] = (float*)data;
 			}
-			else if (port >= MIXTRI_DLY_I_0 && port <= MIXTRI_DLY_O_3) {
+			else if (port >= MIXTRI_DLY_I_0 && port <= MIXTRI_DLY_O_2) {
 				self->p_delay[port - MIXTRI_DLY_I_0] = (float*)data;
 			}
 			else if (port >= MIXTRI_GAIN_I_0 && port <= MIXTRI_GAIN_I_3) {
@@ -156,10 +157,10 @@ run(LV2_Handle handle, uint32_t n_samples)
 
 	float const * const * a_i = (float const * const *) self->a_in;
 	float * const * a_o = self->a_out;
-	float mix[16];
+	float mix[12];
 	int fade_i[4] = { 0, 0, 0, 0};
-	int fade_o[4] = { 0, 0, 0, 0};
-	int delay_i[4], delay_o[4];
+	int fade_o[3] = { 0, 0, 0};
+	int delay_i[4], delay_o[3];
 	float flt_z[4], flt_y[4], amp_in[4];
 	int cmode_in[4];
 	int pmode_in[4];
@@ -170,7 +171,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 	const int trigger_mode = *self->p_trigger_mode;
 	const int trigger_chn  = MIN(3, MAX(0, *self->p_trigger_chn));
 
-	for (uint32_t i = 0; i < 16; ++i) {
+	for (uint32_t i = 0; i < 12; ++i) {
 		mix[i] = *(self->p_mix[i]);
 	}
 
@@ -181,19 +182,21 @@ run(LV2_Handle handle, uint32_t n_samples)
 		pmode_in[i] = self->mode_input[i];
 
 		delay_i[i] = *(self->p_delay[i]);
-		delay_o[i] = *(self->p_delay[i+4]);
-
 		if (delay_i[i] != self->dly_i[i].c_dly) {
 			fade_i[i] = fade_len;
-		}
-		if (delay_o[i] != self->dly_o[i].c_dly) {
-			fade_o[i] = fade_len;
 		}
 		if (self->gain_db[i] != *(self->p_gain_in[i])) {
 			self->gain_db[i] = *(self->p_gain_in[i]);
 			self->gain_in[i] = pow(10, .05 * self->gain_db[i]);
 		}
 		amp_in[i] = self->gain_in[i];
+	}
+
+	for (uint32_t i = 0; i < 3; ++i) {
+		delay_o[i] = *(self->p_delay[i+4]);
+		if (delay_o[i] != self->dly_o[i].c_dly) {
+			fade_o[i] = fade_len;
+		}
 	}
 
 	for (uint32_t n = 0; n < n_samples; ++n) {
@@ -273,21 +276,19 @@ run(LV2_Handle handle, uint32_t n_samples)
 				ltc_decoder_write_float(self->decoder, &d_i[trigger_chn], 1, n + monotonic_cnt);
 				break;
 			default:
-				a_o[4][n] = d_i[trigger_chn];
+				a_o[3][n] = d_i[trigger_chn];
 				break;
 		}
 
 		/* mix matrix */
-		d_o[0] = d_i[0] * mix[0] + d_i[1] * mix[4] + d_i[2] * mix[ 8] + d_i[3] * mix[12];
-		d_o[1] = d_i[0] * mix[1] + d_i[1] * mix[5] + d_i[2] * mix[ 9] + d_i[3] * mix[13];
-		d_o[2] = d_i[0] * mix[2] + d_i[1] * mix[6] + d_i[2] * mix[10] + d_i[3] * mix[14];
-		d_o[3] = d_i[0] * mix[3] + d_i[1] * mix[7] + d_i[2] * mix[11] + d_i[3] * mix[15];
+		d_o[0] = d_i[0] * mix[0] + d_i[1] * mix[3] + d_i[2] * mix[6] + d_i[3] * mix[ 9];
+		d_o[1] = d_i[0] * mix[1] + d_i[1] * mix[4] + d_i[2] * mix[7] + d_i[3] * mix[10];
+		d_o[2] = d_i[0] * mix[2] + d_i[1] * mix[5] + d_i[2] * mix[8] + d_i[3] * mix[11];
 
 		/* output delaylines */
 		DELAYLINE_STEP(d_o[0], a_o[0][n], o, 0)
 		DELAYLINE_STEP(d_o[1], a_o[1][n], o, 1)
 		DELAYLINE_STEP(d_o[2], a_o[2][n], o, 2)
-		DELAYLINE_STEP(d_o[3], a_o[3][n], o, 3)
 	}
 
 	/* copy back filter vars */
@@ -305,11 +306,11 @@ run(LV2_Handle handle, uint32_t n_samples)
 		case 1:
 			{
 				LTCFrameExt frame;
-				memset(a_o[4], 0, sizeof(float) * n_samples);
+				memset(a_o[3], 0, sizeof(float) * n_samples);
 				while (ltc_decoder_read(self->decoder,&frame)) {
 					if (frame.off_end >= monotonic_cnt && frame.off_end < monotonic_cnt + n_samples) {
 						const int nf = frame.off_end - monotonic_cnt;
-						a_o[4][nf] = 1.0;
+						a_o[3][nf] = 1.0;
 					}
 				}
 			}

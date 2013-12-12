@@ -16,7 +16,7 @@ cat > lv2ttl/mixtri.lv2.ttl.in << EOF
   [
 EOF
 
-i=0; while test $i -lt 4; do 
+i=1; while test $i -lt 5; do
 cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     a lv2:AudioPort ,
       lv2:InputPort ;
@@ -29,7 +29,7 @@ EOF
 	IDX=$[$IDX + 1]
 done
 
-i=0; while test $i -lt 4; do 
+i=1; while test $i -lt 4; do
 cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     a lv2:AudioPort ,
       lv2:OutputPort ;
@@ -52,7 +52,7 @@ cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
 EOF
 IDX=$[$IDX + 1]
 
-i=0; while test $i -lt 4; do 
+i=0; while test $i -lt 4; do
 cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     a lv2:ControlPort ,
       lv2:InputPort ;
@@ -68,8 +68,8 @@ EOF
 	IDX=$[$IDX + 1]
 done
 
-i=0; while test $i -lt 4; do 
-	j=0; while test $j -lt 4; do
+i=0; while test $i -lt 4; do
+	j=0; while test $j -lt 3; do
 	AMP=0.0
 	if test $j -eq $i; then AMP=1.0; fi
 cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
@@ -92,7 +92,7 @@ EOF
 	i=$[$i + 1]
 done
 
-i=0; while test $i -lt 4; do 
+i=0; while test $i -lt 4; do
 cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     a lv2:ControlPort ,
       lv2:InputPort ;
@@ -109,7 +109,7 @@ EOF
 	IDX=$[$IDX + 1]
 done
 
-i=0; while test $i -lt 4; do 
+i=0; while test $i -lt 3; do
 cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     a lv2:ControlPort ,
       lv2:InputPort ;
@@ -126,7 +126,7 @@ EOF
 	IDX=$[$IDX + 1]
 done
 
-i=0; while test $i -lt 4; do 
+i=0; while test $i -lt 4; do
 cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     a lv2:ControlPort ,
       lv2:InputPort ;
