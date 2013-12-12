@@ -1,2 +1,3 @@
 .gitignore export-ignore
 .gitattributes export-ignore
+/genttl.sh export-ignore

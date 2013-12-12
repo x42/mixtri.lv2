@@ -107,7 +107,7 @@ ifeq ($(shell pkg-config --atleast-version=1.4.2 lv2 && echo yes), yes)
 endif
 
 # add library dependent flags and libs
-override CFLAGS +=-fPIC $(OPTIMIZATIONS) -DTUNAVERSION="\"$(mixtri_VERSION)\""
+override CFLAGS +=-fPIC $(OPTIMIZATIONS) -DMIXTRIVERSION="\"$(mixtri_VERSION)\""
 override CFLAGS += `pkg-config --cflags lv2`
 
 LV2CFLAGS=$(CFLAGS) `pkg-config --cflags ltc`

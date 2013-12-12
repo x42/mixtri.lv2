@@ -56,6 +56,7 @@ typedef struct {
 	float* a_in[4];
 	float* a_out[5];
 
+	float* p_gain_in[4];
 	float* p_mix[16];
 	float* p_delay[8];
 	float* p_input[4];
@@ -70,6 +71,9 @@ typedef struct {
 	float flt_z[4];
 	float flt_y[4];
 	float flt_alpha;
+
+	float gain_db[4];
+	float gain_in[4];
 
 	LTCDecoder *decoder;
 	uint64_t monotonic_cnt;
@@ -98,6 +102,8 @@ instantiate(
 		self->flt_y[i] = 0;
 		memset(self->dly_i[i].buffer, 0, sizeof(float) * MAXDELAY);
 		memset(self->dly_o[i].buffer, 0, sizeof(float) * MAXDELAY);
+		self->gain_db[i] = 0.0;
+		self->gain_in[i] = 1.0;
 	}
 
 	self->decoder = ltc_decoder_create(rate / 25, 8);
@@ -133,6 +139,9 @@ connect_port_mixtri(
 			else if (port >= MIXTRI_DLY_I_0 && port <= MIXTRI_DLY_O_3) {
 				self->p_delay[port - MIXTRI_DLY_I_0] = (float*)data;
 			}
+			else if (port >= MIXTRI_GAIN_I_0 && port <= MIXTRI_GAIN_I_3) {
+				self->p_gain_in[port - MIXTRI_GAIN_I_0] = (float*)data;
+			}
 			else if (port >= MIXTRI_MOD_I_0 && port <= MIXTRI_MOD_I_3) {
 				self->p_input[port - MIXTRI_MOD_I_0] = (float*)data;
 			}
@@ -151,7 +160,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 	int fade_i[4] = { 0, 0, 0, 0};
 	int fade_o[4] = { 0, 0, 0, 0};
 	int delay_i[4], delay_o[4];
-	float flt_z[4], flt_y[4];
+	float flt_z[4], flt_y[4], amp_in[4];
 	int cmode_in[4];
 	int pmode_in[4];
 
@@ -164,6 +173,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 	for (uint32_t i = 0; i < 16; ++i) {
 		mix[i] = *(self->p_mix[i]);
 	}
+
 	for (uint32_t i = 0; i < 4; ++i) {
 		flt_z[i] = self->flt_z[i];
 		flt_y[i] = self->flt_y[i];
@@ -179,6 +189,11 @@ run(LV2_Handle handle, uint32_t n_samples)
 		if (delay_o[i] != self->dly_o[i].c_dly) {
 			fade_o[i] = fade_len;
 		}
+		if (self->gain_db[i] != *(self->p_gain_in[i])) {
+			self->gain_db[i] = *(self->p_gain_in[i]);
+			self->gain_in[i] = pow(10, .05 * self->gain_db[i]);
+		}
+		amp_in[i] = self->gain_in[i];
 	}
 
 	for (uint32_t n = 0; n < n_samples; ++n) {
@@ -238,7 +253,8 @@ run(LV2_Handle handle, uint32_t n_samples)
 		else if (cmode_in[CHN] != pmode_in[CHN] && n < 2 * fade_len) { \
 			const float gain = (float)(n - fade_len) / fade_len; \
 			OUT[CHN] *= gain; \
-		}
+		} \
+		OUT[CHN] *= amp_in[CHN];
 
 		/* input delaylines */
 		DELAYLINE_STEP(a_i[0][n], ain[0], i, 0)
