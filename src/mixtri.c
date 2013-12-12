@@ -219,38 +219,38 @@ run(LV2_Handle handle, uint32_t n_samples)
 			DELAYLINE_INC(IN, OUT, IO, CHN) \
 		}
 
-#define PREFILTER(CHN) \
-		flt_y[CHN] = alpha * (flt_y[CHN] + a_i[CHN][n] - flt_z[CHN]); \
-		flt_z[CHN] = a_i[CHN][n]; \
+#define PREFILTER(IN, OUT, CHN) \
+		flt_y[CHN] = alpha * (flt_y[CHN] + IN[CHN] - flt_z[CHN]); \
+		flt_z[CHN] = IN[CHN]; \
 		switch(cmode_in[CHN]) { \
-			case 0: ain[CHN] = a_i[CHN][n]; break; \
-			case 2: ain[CHN] = flt_y[CHN]; break; \
-			default: ain[CHN] = 0; break; \
+			case 0: OUT[CHN] = IN[CHN]; break; \
+			case 2: OUT[CHN] = flt_y[CHN]; break; \
+			default: OUT[CHN] = 0; break; \
 		} \
 		if (cmode_in[CHN] != pmode_in[CHN] && n < fade_len) { \
 			const float gain = (float)(fade_len - n) / fade_len; \
 			switch(pmode_in[CHN]) { \
-				case 0: ain[CHN] = a_i[CHN][n] * gain; break; \
-				case 2: ain[CHN] = flt_y[CHN] * gain; break; \
-				default: ain[CHN] = 0; break; \
+				case 0: OUT[CHN] = IN[CHN] * gain; break; \
+				case 2: OUT[CHN] = flt_y[CHN] * gain; break; \
+				default: OUT[CHN] = 0; break; \
 			} \
 		} \
 		else if (cmode_in[CHN] != pmode_in[CHN] && n < 2 * fade_len) { \
 			const float gain = (float)(n - fade_len) / fade_len; \
-			ain[CHN] *= gain; \
+			OUT[CHN] *= gain; \
 		}
 
-		/* filter | mute */
-		PREFILTER(0)
-		PREFILTER(1)
-		PREFILTER(2)
-		PREFILTER(3)
-
 		/* input delaylines */
-		DELAYLINE_STEP(ain[0], d_i[0], i, 0)
-		DELAYLINE_STEP(ain[1], d_i[1], i, 1)
-		DELAYLINE_STEP(ain[2], d_i[2], i, 2)
-		DELAYLINE_STEP(ain[3], d_i[3], i, 3)
+		DELAYLINE_STEP(a_i[0][n], ain[0], i, 0)
+		DELAYLINE_STEP(a_i[1][n], ain[1], i, 1)
+		DELAYLINE_STEP(a_i[2][n], ain[2], i, 2)
+		DELAYLINE_STEP(a_i[3][n], ain[3], i, 3)
+
+		/* filter | mute */
+		PREFILTER(ain, d_i, 0)
+		PREFILTER(ain, d_i, 1)
+		PREFILTER(ain, d_i, 2)
+		PREFILTER(ain, d_i, 3)
 
 		switch (trigger_mode) {
 			case 1:
