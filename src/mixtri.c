@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
+#include <ltc.h>
 
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 #include "mixtri.h"
@@ -70,6 +71,9 @@ typedef struct {
 	float flt_y[4];
 	float flt_alpha;
 
+	LTCDecoder *decoder;
+	uint64_t monotonic_cnt;
+
 } MixTri;
 
 static LV2_Handle
@@ -96,6 +100,8 @@ instantiate(
 		memset(self->dly_o[i].buffer, 0, sizeof(float) * MAXDELAY);
 	}
 
+	self->decoder = ltc_decoder_create(rate / 25, 8);
+	self->monotonic_cnt = 0;
 	return (LV2_Handle)self;
 }
 
@@ -149,6 +155,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 	int cmode_in[4];
 	int pmode_in[4];
 
+	const uint64_t monotonic_cnt = self->monotonic_cnt;
 	const float fade_len = (n_samples >= FADE_LEN) ? FADE_LEN : ceilf(n_samples / 2.f);
 	const float alpha = self->flt_alpha;
 	const int trigger_mode = *self->p_trigger_mode;
@@ -245,6 +252,15 @@ run(LV2_Handle handle, uint32_t n_samples)
 		DELAYLINE_STEP(ain[2], d_i[2], i, 2)
 		DELAYLINE_STEP(ain[3], d_i[3], i, 3)
 
+		switch (trigger_mode) {
+			case 1:
+				ltc_decoder_write_float(self->decoder, &d_i[trigger_chn], 1, n + monotonic_cnt);
+				break;
+			default:
+				a_o[4][n] = d_i[trigger_chn];
+				break;
+		}
+
 		/* mix matrix */
 		d_o[0] = d_i[0] * mix[0] + d_i[1] * mix[4] + d_i[2] * mix[ 8] + d_i[3] * mix[12];
 		d_o[1] = d_i[0] * mix[1] + d_i[1] * mix[5] + d_i[2] * mix[ 9] + d_i[3] * mix[13];
@@ -269,18 +285,30 @@ run(LV2_Handle handle, uint32_t n_samples)
 		self->mode_input[i] = cmode_in[i];
 	}
 
-	/* trigger port */
 	switch (trigger_mode) {
+		case 1:
+			{
+				LTCFrameExt frame;
+				memset(a_o[4], 0, sizeof(float) * n_samples);
+				while (ltc_decoder_read(self->decoder,&frame)) {
+					if (frame.off_end >= monotonic_cnt && frame.off_end < monotonic_cnt + n_samples) {
+						const int nf = frame.off_end - monotonic_cnt;
+						a_o[4][nf] = 1.0;
+					}
+				}
+			}
+			break;
 		default:
-			memcpy(a_o[4], a_i[trigger_chn], sizeof(float) * n_samples);
 			break;
 	}
+	self->monotonic_cnt += n_samples;
 }
 
 static void
 cleanup(LV2_Handle handle)
 {
-	//MixTri* self = (MixTri*)handle;
+	MixTri* self = (MixTri*)handle;
+	ltc_decoder_free(self->decoder);
 	free(handle);
 }
 

@@ -76,8 +76,8 @@ ifeq ($(shell pkg-config --exists lv2 || echo no), no)
   $(error "LV2 SDK was not found")
 endif
 
-ifeq ($(shell pkg-config --exists fftw3f || echo no), no)
-  $(error "fftw3f library was not found")
+ifeq ($(shell pkg-config --exists ltc || echo no), no)
+  $(error "LV2 libltc was not found")
 endif
 
 ifeq ($(shell pkg-config --atleast-version=1.4 lv2 || echo no), no)
@@ -110,8 +110,8 @@ endif
 override CFLAGS +=-fPIC $(OPTIMIZATIONS) -DTUNAVERSION="\"$(mixtri_VERSION)\""
 override CFLAGS += `pkg-config --cflags lv2`
 
-LV2CFLAGS=$(CFLAGS) `pkg-config --cflags fftw3f`
-LOADLIBES=`pkg-config --libs fftw3f` -lm
+LV2CFLAGS=$(CFLAGS) `pkg-config --cflags ltc`
+LOADLIBES=`pkg-config --libs ltc` -lm
 
 GTKUICFLAGS+=`pkg-config --cflags gtk+-2.0 cairo pango`
 GTKUILIBS+=`pkg-config --libs gtk+-2.0 cairo pango`
