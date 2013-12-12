@@ -26,10 +26,10 @@
 #include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
 #include "src/mixtri.h"
 
-#define MIX_WIDTH  76
+#define MIX_WIDTH  80
 #define MIX_HEIGHT 40
 #define MIX_RADIUS 10
-#define MIX_CX 37.5
+#define MIX_CX 39.5
 #define MIX_CY 16.5
 
 typedef struct {
@@ -58,6 +58,8 @@ typedef struct {
 	cairo_surface_t* routeM;
 	cairo_surface_t* routeE;
 	cairo_surface_t* routeI;
+	cairo_surface_t* delayI;
+	cairo_surface_t* delayO;
 
 } MixTriUI;
 
@@ -150,11 +152,17 @@ static void create_faceplate(MixTriUI *ui) {
 	cairo_move_to(cr, 0, MIX_CY);
 	cairo_line_to(cr, 60, MIX_CY);
 	cairo_stroke(cr);
+#ifndef GTK_BACKEND
+	cairo_move_to(cr, 6.5, MIX_CY-3.5);
+	cairo_line_to(cr, 6.5, MIX_CY+3.5);
+	cairo_line_to(cr, 12.5, MIX_CY);
+	cairo_close_path(cr);
 	cairo_move_to(cr, 60-7.5, MIX_CY-3.5);
 	cairo_line_to(cr, 60-7.5, MIX_CY+3.5);
 	cairo_line_to(cr, 60-1.5, MIX_CY);
 	cairo_close_path(cr);
 	cairo_fill(cr);
+#endif
 	AMPLABEL(  0, 60., 80., 30.5); write_text_full(cr, " 0dB", font, xlp, ylp, 0, -2, c_wht);
 	AMPLABEL( 20, 60., 80., 30.5); write_text_full(cr, "+20", font, xlp, ylp, 0, -2, c_wht);
 	AMPLABEL(-60, 60., 80., 30.5); write_text_full(cr, "-60", font, xlp, ylp, 0, -2, c_wht);
@@ -166,6 +174,42 @@ static void create_faceplate(MixTriUI *ui) {
 	AMPLABEL( 10, 60., 80., 30.5);
 	AMPLABEL( 20, 60., 80., 30.5);
 	pango_font_description_free(font);
+
+	ui->delayO = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, MIX_WIDTH, GSP_HEIGHT);
+	cr = cairo_create (ui->delayO);
+	cairo_set_source_rgba (cr, .3, .2, .4, 1.0);
+	cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
+	cairo_rectangle (cr, 0, 0, MIX_WIDTH, GSP_HEIGHT);
+	cairo_fill (cr);
+	cairo_set_line_width(cr, 1.0);
+	CairoSetSouerceRGBA(c_blk);
+	cairo_move_to(cr, MIX_CX, 0);
+	cairo_line_to(cr, MIX_CX, GSP_HEIGHT);
+	cairo_stroke(cr);
+	cairo_move_to(cr, MIX_CX-3, GSP_HEIGHT-6.5);
+	cairo_line_to(cr, MIX_CX+3, GSP_HEIGHT-6.5);
+	cairo_line_to(cr, MIX_CX, GSP_HEIGHT-0.5);
+	cairo_close_path(cr);
+	cairo_fill(cr);
+	cairo_destroy (cr);
+
+	ui->delayI = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, MIX_WIDTH, GSP_HEIGHT);
+	cr = cairo_create (ui->delayI);
+	cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
+	cairo_set_source_rgba (cr, .0, .0, .0, .0);
+	cairo_rectangle (cr, 0, 0, MIX_WIDTH, GSP_HEIGHT);
+	cairo_fill (cr);
+	cairo_set_source_rgba (cr, .4, .3, .3, 1.0);
+	cairo_rectangle (cr, 0, 0, MIX_WIDTH-4, GSP_HEIGHT);
+	cairo_fill (cr);
+	cairo_set_line_width(cr, 1.0);
+	CairoSetSouerceRGBA(c_g60);
+	cairo_set_line_width(cr, 1.0);
+	cairo_move_to(cr, 0, GSP_CY);
+	cairo_line_to(cr, MIX_WIDTH-3, GSP_CY);
+	cairo_stroke(cr);
+	cairo_destroy (cr);
+
 }
 
 static void annotation_txt(MixTriUI *ui, RobTkDial * d, cairo_t *cr, const char *txt) {
@@ -221,11 +265,15 @@ static bool box_expose_event(RobWidget* rw, cairo_t* cr, cairo_rectangle_t *ev) 
 		rcontainer_clear_bg(rw, cr, &event);
 
 		cairo_set_source_rgba (cr, .4, .3, .3, 1.0);
-		cairo_rectangle (cr, 104, 17, 120, 160);
+		cairo_rectangle (cr, 32, 17, 78, 160);
+		cairo_fill(cr);
+
+		cairo_set_source_rgba (cr, .4, .3, .3, 1.0);
+		cairo_rectangle (cr, 108, 17, 110, 160);
 		cairo_fill(cr);
 
 		cairo_set_source_rgba (cr, .2, .3, .35, 1.0);
-		cairo_rectangle (cr, 502, 17, 60, 160+30);
+		cairo_rectangle (cr, 516, 17, 60, 160+30);
 		cairo_fill(cr);
 
 		const double dashed[] = {2.5};
@@ -233,8 +281,8 @@ static bool box_expose_event(RobWidget* rw, cairo_t* cr, cairo_rectangle_t *ev) 
 		cairo_set_dash(cr, dashed, 1, 4);
 		CairoSetSouerceRGBA(c_g60);
 		for (uint32_t i = 0; i < 4; ++i) {
-			cairo_move_to(cr, 502,      33.5 + i*40);
-			cairo_line_to(cr, 502 + 32, 33.5 + i*40);
+			cairo_move_to(cr, 514,      33.5 + i*40);
+			cairo_line_to(cr, 514 + 32, 33.5 + i*40);
 			cairo_stroke(cr);
 		}
 
@@ -359,7 +407,7 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 #endif
 
 	rob_table_attach(ui->ctable, robtk_lbl_widget(ui->label[0]),
-			0, 2, 0, 1, 0, 0, RTK_EXANDF, RTK_SHRINK);
+			1, 2, 0, 1, 0, 0, RTK_EXANDF, RTK_SHRINK);
 	rob_table_attach(ui->ctable, robtk_lbl_widget(ui->label[1]),
 			2, 5, 5, 6, 0, 0, RTK_EXANDF, RTK_SHRINK);
 	rob_table_attach(ui->ctable, robtk_lbl_widget(ui->label[2]),
@@ -412,7 +460,8 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 		char tmp[16];
 		snprintf(tmp, 16, "In %d ", i+1);
 		ui->lbl_in[i] = robtk_lbl_new(tmp);
-		robtk_lbl_set_alignment(ui->lbl_in[i], 0.0, 0.4);
+		robtk_lbl_set_alignment(ui->lbl_in[i], 0.0, 0.3);
+		robtk_lbl_set_min_geometry(ui->lbl_in[i], 32, 0);
 
 		ui->btn_mute_in[i]  = robtk_cbtn_new("Mute", GBT_LED_LEFT, false);
 		ui->btn_hpfilt_in[i]  = robtk_cbtn_new("HPF", GBT_LED_LEFT, false);
@@ -433,7 +482,13 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 		robtk_spin_set_default(ui->spb_delay_in[i], 0);
 		robtk_spin_set_value(ui->spb_delay_in[i], 0);
 		robtk_spin_set_callback(ui->spb_delay_in[i], cb_set_delay, ui);
-		robtk_spin_label_width(ui->spb_delay_in[i], -1, MIX_WIDTH - GSP_WIDTH - 6);
+		robtk_spin_label_width(ui->spb_delay_in[i], -1, MIX_WIDTH - GSP_WIDTH - 8);
+#ifndef GTK_BACKEND
+		robtk_dial_set_surface(ui->spb_delay_in[i]->dial,ui->delayI);
+		robtk_lbl_set_alignment(ui->spb_delay_in[i]->lbl_r, 0, 0.3);
+		robtk_dial_set_alignment(ui->spb_delay_in[i]->dial, .5, 1.0);
+		ui->spb_delay_in[i]->rw->yalign = .45;
+#endif
 		rob_table_attach(ui->ctable, robtk_spin_widget(ui->spb_delay_in[i]),
 				1, 2, i+1, i+2, 0, 0, RTK_EXANDF, RTK_SHRINK);
 	}
@@ -450,6 +505,10 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 		robtk_spin_set_callback(ui->spb_delay_out[i], cb_set_delay, ui);
 		robtk_spin_set_default(ui->spb_delay_out[i], 0);
 		robtk_spin_set_value(ui->spb_delay_out[i], 0);
+#ifndef GTK_BACKEND
+		robtk_dial_set_surface(ui->spb_delay_out[i]->dial,ui->delayO);
+		robtk_lbl_set_alignment(ui->spb_delay_out[i]->lbl_r, 0, 0.3);
+#endif
 		robtk_spin_label_width(ui->spb_delay_out[i], -1, MIX_WIDTH - GSP_WIDTH - 8);
 		rob_table_attach(ui->ctable, robtk_spin_widget(ui->spb_delay_out[i]),
 				i+5, i+6, 5, 6, 0, 0, RTK_EXANDF, RTK_SHRINK);
@@ -550,6 +609,8 @@ cleanup(LV2UI_Handle handle)
 	cairo_surface_destroy(ui->routeE);
 	cairo_surface_destroy(ui->routeM);
 	cairo_surface_destroy(ui->routeI);
+	cairo_surface_destroy(ui->delayI);
+	cairo_surface_destroy(ui->delayO);
 	pango_font_description_free(ui->font);
 
 	rob_box_destroy(ui->ctable);
