@@ -64,9 +64,12 @@ typedef struct {
 	float* p_trigger_mode;
 
 	double rate;
+
+	/* internal state, delaylines */
 	DelayLine dly_i[4];
 	DelayLine dly_o[3];
 
+	/* internal state, filters */
 	int   mode_input[4];
 	float flt_z[4];
 	float flt_y[4];
@@ -75,6 +78,11 @@ typedef struct {
 	float gain_db[4];
 	float gain_in[4];
 
+	float amp_z[4];
+	float mix_z[12];
+	float mix_alpha;
+
+	/* trigger state */
 	LTCDecoder *decoder;
 	uint64_t monotonic_cnt;
 
@@ -93,7 +101,9 @@ instantiate(
 	}
 
 	self->rate = rate;
-	self->flt_alpha = 1.0 - 5.0 / rate;
+	// 1.0 - e^(-2.0 * π * v / 48000)
+	self->mix_alpha = 1.0f - expf(-2.0 * M_PI * 100 / rate); // LPF
+	self->flt_alpha = 1.0 - 5.0 / rate; // HPF
 
 	for (uint32_t i = 0; i < 4; ++i) {
 		self->mode_input[i] = 0;
@@ -102,9 +112,13 @@ instantiate(
 		memset(self->dly_i[i].buffer, 0, sizeof(float) * MAXDELAY);
 		self->gain_db[i] = 0.0;
 		self->gain_in[i] = 1.0;
+		self->amp_z[i] = 0;
 	}
 	for (uint32_t i = 0; i < 3; ++i) {
 		memset(self->dly_o[i].buffer, 0, sizeof(float) * MAXDELAY);
+	}
+	for (uint32_t i = 0; i < 12; ++i) {
+		self->mix_z[i] = 0;
 	}
 
 	self->decoder = ltc_decoder_create(rate / 25, 8);
@@ -157,22 +171,25 @@ run(LV2_Handle handle, uint32_t n_samples)
 
 	float const * const * a_i = (float const * const *) self->a_in;
 	float * const * a_o = self->a_out;
-	float mix[12];
+	float mix_t[12], mix[12];
 	int fade_i[4] = { 0, 0, 0, 0};
 	int fade_o[3] = { 0, 0, 0};
 	int delay_i[4], delay_o[3];
-	float flt_z[4], flt_y[4], amp_in[4];
+	float flt_z[4], flt_y[4];
+	float amp_in_t[4], amp_in[4];
 	int cmode_in[4];
 	int pmode_in[4];
 
 	const uint64_t monotonic_cnt = self->monotonic_cnt;
 	const float fade_len = (n_samples >= FADE_LEN) ? FADE_LEN : ceilf(n_samples / 2.f);
-	const float alpha = self->flt_alpha;
+	const float flt_alpha = self->flt_alpha;
+	const float mix_alpha = self->mix_alpha;
 	const int trigger_mode = *self->p_trigger_mode;
 	const int trigger_chn  = MIN(3, MAX(0, *self->p_trigger_chn));
 
 	for (uint32_t i = 0; i < 12; ++i) {
-		mix[i] = *(self->p_mix[i]);
+		mix_t[i] = *(self->p_mix[i]);
+		mix[i] = self->mix_z[i];
 	}
 
 	for (uint32_t i = 0; i < 4; ++i) {
@@ -189,7 +206,8 @@ run(LV2_Handle handle, uint32_t n_samples)
 			self->gain_db[i] = *(self->p_gain_in[i]);
 			self->gain_in[i] = pow(10, .05 * self->gain_db[i]);
 		}
-		amp_in[i] = self->gain_in[i];
+		amp_in_t[i] = self->gain_in[i];
+		amp_in[i] = self->amp_z[i];
 	}
 
 	for (uint32_t i = 0; i < 3; ++i) {
@@ -199,6 +217,16 @@ run(LV2_Handle handle, uint32_t n_samples)
 		}
 	}
 
+	/** prepare trigger output **/
+	switch (trigger_mode) {
+		case 1: // LTC - clear channel
+				memset(a_o[3], 0, sizeof(float) * n_samples);
+			break;
+		default:
+			break;
+	}
+
+	/* process every sample */
 	for (uint32_t n = 0; n < n_samples; ++n) {
 		float d_i[4], d_o[4], ain[4];
 
@@ -238,7 +266,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 		}
 
 #define PREFILTER(IN, OUT, CHN) \
-		flt_y[CHN] = alpha * (flt_y[CHN] + IN[CHN] - flt_z[CHN]); \
+		flt_y[CHN] = flt_alpha * (flt_y[CHN] + IN[CHN] - flt_z[CHN]); \
 		flt_z[CHN] = IN[CHN]; \
 		switch(cmode_in[CHN]) { \
 			case 0: OUT[CHN] = IN[CHN]; break; \
@@ -257,6 +285,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 			const float gain = (float)(n - fade_len) / fade_len; \
 			OUT[CHN] *= gain; \
 		} \
+		amp_in[CHN] += mix_alpha * (amp_in_t[CHN] - amp_in[CHN]); \
 		OUT[CHN] *= amp_in[CHN];
 
 		/* input delaylines */
@@ -280,6 +309,12 @@ run(LV2_Handle handle, uint32_t n_samples)
 				break;
 		}
 
+		// manually unroll loop?
+		for (uint32_t i = 0; i < 12; ++i) {
+			/* low-pass filter gain */
+			mix[i] += mix_alpha * (mix_t[i] - mix[i]);
+		}
+
 		/* mix matrix */
 		d_o[0] = d_i[0] * mix[0] + d_i[1] * mix[3] + d_i[2] * mix[6] + d_i[3] * mix[ 9];
 		d_o[1] = d_i[0] * mix[1] + d_i[1] * mix[4] + d_i[2] * mix[7] + d_i[3] * mix[10];
@@ -291,22 +326,11 @@ run(LV2_Handle handle, uint32_t n_samples)
 		DELAYLINE_STEP(d_o[2], a_o[2][n], o, 2)
 	}
 
-	/* copy back filter vars */
-	for (uint32_t i = 0; i < 4; ++i) {
-		self->flt_z[i] = flt_z[i];
-		if (isfinite(flt_y[i])) {
-			self->flt_y[i] = flt_y[i];
-		} else {
-			self->flt_y[i] = 0;
-		}
-		self->mode_input[i] = cmode_in[i];
-	}
-
+	/* post-process trigger */
 	switch (trigger_mode) {
-		case 1:
+		case 1: // LTC
 			{
 				LTCFrameExt frame;
-				memset(a_o[3], 0, sizeof(float) * n_samples);
 				while (ltc_decoder_read(self->decoder,&frame)) {
 					if (frame.off_end >= monotonic_cnt && frame.off_end < monotonic_cnt + n_samples) {
 						const int nf = frame.off_end - monotonic_cnt;
@@ -317,6 +341,34 @@ run(LV2_Handle handle, uint32_t n_samples)
 			break;
 		default:
 			break;
+	}
+
+	/* copy back filter vars */
+	for (uint32_t i = 0; i < 4; ++i) {
+		self->flt_z[i] = flt_z[i];
+		if (isfinite(flt_y[i])) {
+			self->flt_y[i] = flt_y[i];
+		} else {
+			self->flt_y[i] = 0;
+		}
+
+		if (isfinite(amp_in[i])
+				&& fabsf(amp_in[i]) > 0.0001 /* -80dB */) {
+			self->amp_z[i] = amp_in[i] + 1e-20;
+		} else {
+			self->amp_z[i] = 0;
+		}
+
+		self->mode_input[i] = cmode_in[i];
+	}
+
+	for (uint32_t i = 0; i < 12; ++i) {
+		if (isfinite(mix[i])
+				&& fabsf(mix[i]) > 0.0001 /* -80dB */) {
+			self->mix_z[i] = mix[i] + 1e-20;
+		} else {
+			self->mix_z[i] = 0;
+		}
 	}
 	self->monotonic_cnt += n_samples;
 }
