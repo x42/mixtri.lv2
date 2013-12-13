@@ -264,28 +264,61 @@ static bool box_expose_event(RobWidget* rw, cairo_t* cr, cairo_rectangle_t *ev) 
 		cairo_save(cr);
 		rcontainer_clear_bg(rw, cr, &event);
 
+		const float ytop = ((struct rob_table*)rw->self)->rows[0].acq_h;
+		float tx0 = 0, tc0 = 0, tc1 = 0;
+		for (uint32_t i = 0; i < 8; ++i) {
+			tx0 += ((struct rob_table*)rw->self)->cols[i].acq_w;
+			if (i == 0) tc0 = tx0;
+			if (i == 3) tc1 = tx0;
+		}
+		const float yof = ytop + MIX_CY;
+		const float twi = ((struct rob_table*)rw->self)->cols[8].acq_w;
+		const float tx1 = tx0 + twi / 2;
+
+		/* fixup in-delayline bg  & channel mods */
 		cairo_set_source_rgba (cr, .4, .3, .3, 1.0);
-		cairo_rectangle (cr, 32, 17, 78, 160);
+		cairo_rectangle (cr, tc0, ytop, tc1-tc0, 160);
 		cairo_fill(cr);
 
-		cairo_set_source_rgba (cr, .4, .3, .3, 1.0);
-		cairo_rectangle (cr, 108, 17, 110, 160);
-		cairo_fill(cr);
-
+		/* right end trigger background */
 		cairo_set_source_rgba (cr, .2, .3, .35, 1.0);
-		cairo_rectangle (cr, 516, 17, 60, 160+30);
+		cairo_rectangle (cr, tx0, ytop, twi, 160+30);
 		cairo_fill(cr);
 
-		const double dashed[] = {2.5};
 		cairo_set_line_width(cr, 1.0);
-		cairo_set_dash(cr, dashed, 1, 4);
 		CairoSetSouerceRGBA(c_g60);
+
 		for (uint32_t i = 0; i < 4; ++i) {
-			cairo_move_to(cr, 514,      33.5 + i*40);
-			cairo_line_to(cr, 514 + 32, 33.5 + i*40);
+			const float y0 = yof + i * MIX_HEIGHT;
+			cairo_move_to(cr, tc0, y0);
+			cairo_line_to(cr, tc1, y0);
 			cairo_stroke(cr);
 		}
 
+		const double dashed[] = {2.5};
+		cairo_set_dash(cr, dashed, 1, 4);
+		for (uint32_t i = 0; i < 4; ++i) {
+			const float y0 = yof + i * MIX_HEIGHT;
+			cairo_move_to(cr, tx0-2, y0);
+			cairo_line_to(cr, tx1, y0);
+			cairo_stroke(cr);
+		}
+		cairo_set_dash(cr, NULL, 0, 0);
+		CairoSetSouerceRGBA(c_blk);
+		for (uint32_t i = 0; i < 5; ++i) {
+			float y0 = yof + i * MIX_HEIGHT;
+			cairo_move_to(cr, tx1+.5, y0);
+			cairo_line_to(cr, tx1+.5, y0 + MIX_HEIGHT);
+			cairo_stroke(cr);
+
+			if (i == 4) y0 -= 10; // MIX_HEIGHT - GED_HEIGHT
+
+			cairo_move_to(cr, tx1+.5-3, y0+23-6.5);
+			cairo_line_to(cr, tx1+.5+3, y0+23-6.5);
+			cairo_line_to(cr, tx1+.5,   y0+23-0.5);
+			cairo_close_path(cr);
+			cairo_fill(cr);
+		}
 		cairo_restore(cr);
 	}
 	return rcontainer_expose_event_no_clear(rw, cr, ev);
@@ -386,9 +419,9 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	ui->label[1] = robtk_lbl_new("Output Delay [spl] \u2192 ");
 	ui->label[2] = robtk_lbl_new("Mixer Matrix [amp]");
 	ui->label[3] = robtk_lbl_new("Chnannel mod.");
-	ui->label[4] = robtk_lbl_new("Trigger");
+	ui->label[4] = robtk_lbl_new("Out Trigger");
 	ui->label[5] = robtk_lbl_new("Gain");
-	ui->label[6] = robtk_lbl_new("Trig.");
+	ui->label[6] = robtk_lbl_new("Trigger");
 	ui->label[7] = robtk_lbl_new("x42 MixTri LV2 " MIXTRIVERSION);
 
 	robtk_lbl_set_alignment(ui->label[0], 0.5, 0.5);
@@ -515,6 +548,8 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	}
 
 	ui->sel_trig_mode = robtk_select_new();
+	robtk_select_set_alignment(ui->sel_trig_mode, .5, 0);
+	ui->sel_trig_mode->t_width = MIX_WIDTH - 36;
 	robtk_select_add_item(ui->sel_trig_mode, 0, "-");
 	robtk_select_add_item(ui->sel_trig_mode, 1, "LTC");
 	robtk_select_set_callback(ui->sel_trig_mode, cb_set_trig_mode, ui);
