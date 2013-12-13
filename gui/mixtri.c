@@ -105,12 +105,14 @@ static void create_faceplate(MixTriUI *ui) {
 	cairo_line_to(cr, MIX_CX, MIX_HEIGHT-0.5); \
 	cairo_close_path(cr); \
 	cairo_fill(cr); \
-	AMPLABEL(-5.623, 6., 12., MIX_CX); write_text_full(cr, "+15 ", font, xlp, ylp, 0, -2, c_wht); \
-	AMPLABEL(-3.162, 6., 12., MIX_CX); write_text_full(cr, "\u00D8", font, xlp, ylp, 0, -2, c_wht); \
-	AMPLABEL(3.162, 6., 12., MIX_CX); AMPLABEL(0, 6., 12., MIX_CX); \
-	AMPLABEL(-1, 6., 12., MIX_CX); AMPLABEL(1, 6., 12., MIX_CX); \
-	AMPLABEL(-1.995, 6., 12., MIX_CX); AMPLABEL(1.995, 6., 12., MIX_CX); \
-	AMPLABEL(5.623, 6., 12., MIX_CX); write_text_full(cr, "+15", font, xlp, ylp, 0, -2, c_wht); \
+	AMPLABEL(-20, 20., 40., MIX_CX); write_text_full(cr, "-20", font, xlp, ylp, 0, -2, c_wht); \
+	AMPLABEL( 20, 20., 40., MIX_CX); write_text_full(cr, "+20", font, xlp, ylp, 0, -2, c_wht); \
+	AMPLABEL(  0, 20., 40., MIX_CX); \
+	AMPLABEL(-12, 20., 40., MIX_CX); \
+	AMPLABEL( -6, 20., 40., MIX_CX); \
+	AMPLABEL(  0, 20., 40., MIX_CX); \
+	AMPLABEL(  6, 20., 40., MIX_CX); \
+	AMPLABEL( 12, 20., 40., MIX_CX); \
 	cairo_destroy (cr);
 
 	COMMONRROUTE(ui->routeM, 0, MIX_WIDTH);
@@ -235,13 +237,16 @@ static void annotation_txt(MixTriUI *ui, RobTkDial * d, cairo_t *cr, const char 
 static void dial_annotation_val(RobTkDial * d, cairo_t *cr, void *data) {
 	MixTriUI* ui = (MixTriUI*) (data);
 	char tmp[16];
-
-	if (d->cur == 0) {
-		snprintf(tmp, 16, "-\u221EdB");
-	} else if (d->cur > 0) {
-		snprintf(tmp, 16, "%+4.1fdB", 20 * log10f(d->cur));
-	} else {
-		snprintf(tmp, 16, "\u00D8%+4.1fdB", 20 * log10f(-d->cur));
+	switch(d->click_state) {
+		case 1:
+			snprintf(tmp, 16, "-\u221EdB");
+			break;
+		case 2:
+			snprintf(tmp, 16, "\u00D8%+4.1fdB", d->cur);
+			break;
+		default:
+			snprintf(tmp, 16, "%+4.1fdB", d->cur);
+			break;
 	}
 	annotation_txt(ui, d, cr, tmp);
 }
@@ -378,7 +383,17 @@ static bool cb_set_mix (RobWidget* handle, void *data) {
 	MixTriUI* ui = (MixTriUI*) (data);
 	if (ui->disable_signals) return TRUE;
 	for (uint32_t i = 0; i < 12; ++i) {
-		float val = robtk_dial_get_value(ui->dial_mix[i]);
+		float val = pow(10, .05 * robtk_dial_get_value(ui->dial_mix[i]));
+		switch(robtk_dial_get_state(ui->dial_mix[i])) {
+			case 1:
+				val = 0;
+				break;
+			case 2:
+				val *= -1;
+				break;
+			default:
+				break;
+		}
 		ui->write(ui->controller, MIXTRI_MIX_0_0 + i, sizeof(float), 0, (const void*) &val);
 	}
 	return TRUE;
@@ -470,11 +485,16 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	}
 
 	for (uint32_t i = 0; i < 12; ++i) {
-		ui->dial_mix[i] = robtk_dial_new_with_size(-6.0, 6.0, .01,
+		ui->dial_mix[i] = robtk_dial_new_with_size(-20.0, 20.0, .01,
 				MIX_WIDTH, MIX_HEIGHT, MIX_CX, MIX_CY, MIX_RADIUS);
-		const float g = ((i%3) == (i/3)) ? 1.0 : 0.0;
-		robtk_dial_set_default(ui->dial_mix[i], g);
-		robtk_dial_set_value(ui->dial_mix[i], g);
+		const int g = ((i%3) == (i/3)) ? 0 : 1;
+		robtk_dial_enable_states(ui->dial_mix[i], 2);
+		robtk_dial_set_state_color(ui->dial_mix[i], 1, .15, .15, .15, 1.0);
+		robtk_dial_set_state_color(ui->dial_mix[i], 2, 1.0, .0, .0, .3);
+		robtk_dial_set_default(ui->dial_mix[i], 0);
+		robtk_dial_set_default_state(ui->dial_mix[i], g);
+		robtk_dial_set_state(ui->dial_mix[i], g);
+		robtk_dial_set_value(ui->dial_mix[i], 0);
 		robtk_dial_set_callback(ui->dial_mix[i], cb_set_mix, ui);
 		robtk_dial_annotation_callback(ui->dial_mix[i], dial_annotation_val, ui);
 		rob_table_attach(ui->ctable, robtk_dial_widget(ui->dial_mix[i]),
@@ -668,7 +688,15 @@ port_event(LV2UI_Handle handle,
 	if (port >= MIXTRI_MIX_0_0 && port <= MIXTRI_MIX_3_2) {
 		const int d = port - MIXTRI_MIX_0_0;
 		ui->disable_signals = true;
-		robtk_dial_set_value(ui->dial_mix[d], v);
+		if (v == 0) {
+			robtk_dial_set_state(ui->dial_mix[d], 1);
+		} else if (v < 0) {
+			robtk_dial_set_state(ui->dial_mix[d], 2);
+			robtk_dial_set_value(ui->dial_mix[d], 20 * log10f(-v));
+		} else {
+			robtk_dial_set_state(ui->dial_mix[d], 0);
+			robtk_dial_set_value(ui->dial_mix[d], 20 * log10f(v));
+		}
 		ui->disable_signals = false;
 	}
 	else if (port >= MIXTRI_DLY_I_0 && port <= MIXTRI_DLY_I_3) {
