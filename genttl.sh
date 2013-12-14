@@ -149,7 +149,6 @@ done
 
 
 
-
 cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     a lv2:ControlPort ,
       lv2:InputPort ;
@@ -157,22 +156,74 @@ cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     lv2:symbol "trigger_channel" ;
     lv2:name "Trigger Channel" ;
     lv2:minimum  0.0;
-    lv2:maximum  4.0;
-    lv2:default  0.0;
+    lv2:maximum  3.0;
+    lv2:default  4.0;
     lv2:portProperty lv2:integer ;
   ] , [
-EOF
-
-IDX=$[$IDX + 1]
-
-cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     a lv2:ControlPort ,
       lv2:InputPort ;
-    lv2:index ${IDX} ;
+    lv2:index $(($IDX + 1));
     lv2:symbol "trigger_mode" ;
     lv2:name "Trigger Mode" ;
     lv2:minimum  0.0;
+    lv2:maximum  2.0;
+    lv2:default  0.0;
+    lv2:portProperty lv2:integer ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint [ rdfs:label "passtru"; rdf:value 0.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "LTC"; rdf:value 1.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "Edge"; rdf:value 2.0 ; ] ;
+  ] , [
+    a lv2:ControlPort ,
+      lv2:InputPort ;
+    lv2:index $(($IDX + 2));
+    lv2:symbol "trigger_edge" ;
+    lv2:name "Trigger Edge Mode" ;
+    lv2:minimum  0.0;
+    lv2:maximum  3.0;
+    lv2:default  0.0;
+    lv2:portProperty lv2:integer ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint [ rdfs:label "off"; rdf:value 0.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "rising-edge"; rdf:value 1.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "falling-edge"; rdf:value 2.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "any-edge"; rdf:value 3.0 ; ] ;
+  ] , [
+    a lv2:ControlPort ,
+      lv2:InputPort ;
+    lv2:index $(($IDX + 3));
+    lv2:symbol "trigger_level1" ;
+    lv2:name "Trigger Level1" ;
+    lv2:minimum  -1.0;
     lv2:maximum  1.0;
+    lv2:default  0.0;
+  ] , [
+    a lv2:ControlPort ,
+      lv2:InputPort ;
+    lv2:index $(($IDX + 4));
+    lv2:symbol "trigger_level2" ;
+    lv2:name "Trigger Level2" ;
+    lv2:minimum  -1.0;
+    lv2:maximum  1.0;
+    lv2:default  0.0;
+  ] , [
+    a lv2:ControlPort ,
+      lv2:InputPort ;
+    lv2:index $(($IDX + 5));
+    lv2:symbol "trigger_time1" ;
+    lv2:name "Trigger time1" ;
+    lv2:minimum  0.0;
+    lv2:maximum  192000;
+    lv2:default  0.0;
+    lv2:portProperty lv2:integer ;
+  ] , [
+    a lv2:ControlPort ,
+      lv2:InputPort ;
+    lv2:index $(($IDX + 6));
+    lv2:symbol "trigger_time2" ;
+    lv2:name "Trigger time2" ;
+    lv2:minimum  0.0;
+    lv2:maximum  192000;
     lv2:default  0.0;
     lv2:portProperty lv2:integer ;
 EOF

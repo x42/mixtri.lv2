@@ -40,7 +40,7 @@ typedef struct {
 
 	RobTkLbl  *lbl_in[4];
 	RobTkLbl  *lbl_out[3];
-	RobTkLbl  *label[8];
+	RobTkLbl  *label[9];
 	RobTkDial *dial_in[4];
 	RobTkDial *dial_mix[12];
 	RobTkSpin *spb_delay_in[4];
@@ -49,6 +49,12 @@ typedef struct {
 	RobTkCBtn *btn_mute_in[4];
 	RobTkRBtn *btn_trig_src[4];
 	RobTkSelect *sel_trig_mode;
+
+	RobTkLbl  *lbl_trig[4];
+	RobTkSelect *sel_trig_edge;
+	RobTkSpin *spb_trigger_tme[2];
+	RobTkSpin *spb_trigger_lvl[2];
+
 	bool disable_signals;
 
 	PangoFontDescription *font;
@@ -334,11 +340,35 @@ static bool box_expose_event(RobWidget* rw, cairo_t* cr, cairo_rectangle_t *ev) 
  * UI callbacks
  */
 
+#define TRIGGERSENS(ED,L0,L1,T0,T1) \
+	robtk_select_set_sensitive(ui->sel_trig_edge,    (ED)?true:false); \
+	robtk_spin_set_sensitive(ui->spb_trigger_lvl[0], (L0)?true:false); \
+	robtk_spin_set_sensitive(ui->spb_trigger_lvl[1], (L1)?true:false); \
+	robtk_spin_set_sensitive(ui->spb_trigger_tme[0], (T0)?true:false); \
+	robtk_spin_set_sensitive(ui->spb_trigger_tme[1], (T1)?true:false); 
+
 static bool cb_set_trig_mode (RobWidget* handle, void *data) {
 	MixTriUI* ui = (MixTriUI*) (data);
-	if (ui->disable_signals) return TRUE;
 	float mode = robtk_select_get_value(ui->sel_trig_mode);
+	switch ((int)mode) {
+		case TRG_PASSTRHU:
+		case TRG_LTC:
+			TRIGGERSENS(0,0,0,0,0);
+			break;
+		case TRG_EDGE :
+			TRIGGERSENS(1,1,0,0,0);
+			break;
+	}
+	if (ui->disable_signals) return TRUE;
 	ui->write(ui->controller, MIXTRI_TRIG_MODE, sizeof(float), 0, (const void*) &mode);
+	return TRUE;
+}
+
+static bool cb_set_trig_edge (RobWidget* handle, void *data) {
+	MixTriUI* ui = (MixTriUI*) (data);
+	if (ui->disable_signals) return TRUE;
+	float mode = robtk_select_get_value(ui->sel_trig_edge);
+	ui->write(ui->controller, MIXTRI_TRIG_EDGE, sizeof(float), 0, (const void*) &mode);
 	return TRUE;
 }
 
@@ -353,6 +383,22 @@ static bool cb_set_trig_chn (RobWidget* handle, void *data) {
 		}
 	}
 	ui->write(ui->controller, MIXTRI_TRIG_CHN, sizeof(float), 0, (const void*) &chn);
+	return TRUE;
+}
+
+static bool cb_set_trig_values (RobWidget* handle, void *data) {
+	MixTriUI* ui = (MixTriUI*) (data);
+	float val = 0;
+	if (ui->disable_signals) return TRUE;
+
+	val = robtk_spin_get_value(ui->spb_trigger_lvl[0]);
+	ui->write(ui->controller, MIXTRI_TRIG_LVL0, sizeof(float), 0, (const void*) &val);
+	val = robtk_spin_get_value(ui->spb_trigger_lvl[1]);
+	ui->write(ui->controller, MIXTRI_TRIG_LVL1, sizeof(float), 0, (const void*) &val);
+	val = robtk_spin_get_value(ui->spb_trigger_tme[0]);
+	ui->write(ui->controller, MIXTRI_TRIG_TME0, sizeof(float), 0, (const void*) &val);
+	val = robtk_spin_get_value(ui->spb_trigger_tme[1]);
+	ui->write(ui->controller, MIXTRI_TRIG_TME1, sizeof(float), 0, (const void*) &val);
 	return TRUE;
 }
 
@@ -438,6 +484,7 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	ui->label[5] = robtk_lbl_new("Gain");
 	ui->label[6] = robtk_lbl_new("Trigger");
 	ui->label[7] = robtk_lbl_new("x42 MixTri LV2 " MIXTRIVERSION);
+	ui->label[8] = robtk_lbl_new("Trig. Settings");
 
 	robtk_lbl_set_alignment(ui->label[0], 0.5, 0.5);
 	robtk_lbl_set_alignment(ui->label[1], 1.0, 0.25);
@@ -447,6 +494,8 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	robtk_lbl_set_alignment(ui->label[5], 0.5, 0.5);
 	robtk_lbl_set_alignment(ui->label[6], 0.5, 0.5);
 	robtk_lbl_set_alignment(ui->label[7], 0.0, 0.5);
+	robtk_lbl_set_alignment(ui->label[8], 0.5, 0.5);
+
 	robtk_lbl_set_color(ui->label[7], .6, .6, .6, 1.0);
 
 	ui->ctable = rob_table_new(/*rows*/7, /*cols*/ 9, FALSE);
@@ -470,6 +519,8 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 			8, 9, 0, 1, 0, 0, RTK_EXANDF, RTK_SHRINK);
 	rob_table_attach(ui->ctable, robtk_lbl_widget(ui->label[7]),
 			0, 3, 6, 7, 0, 0, RTK_EXANDF, RTK_SHRINK);
+	rob_table_attach(ui->ctable, robtk_lbl_widget(ui->label[8]),
+			10, 12, 0, 1, 0, 0, RTK_EXANDF, RTK_SHRINK);
 
 
 	for (uint32_t i = 0; i < 4; ++i) {
@@ -572,6 +623,7 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	ui->sel_trig_mode->t_width = MIX_WIDTH - 36;
 	robtk_select_add_item(ui->sel_trig_mode, 0, "-");
 	robtk_select_add_item(ui->sel_trig_mode, 1, "LTC");
+	robtk_select_add_item(ui->sel_trig_mode, 2, "Edge");
 	robtk_select_set_callback(ui->sel_trig_mode, cb_set_trig_mode, ui);
 
 	rob_table_attach(ui->ctable, robtk_select_widget(ui->sel_trig_mode),
@@ -591,6 +643,48 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 		rob_table_attach(ui->ctable, robtk_rbtn_widget(ui->btn_trig_src[i]),
 				8, 9, i+1, i+2, 0, 0, RTK_EXPAND, RTK_SHRINK);
 	}
+
+#define TBLADD(WIDGET, C0, C1, R) \
+	rob_table_attach(ui->ctable, WIDGET, \
+			(C0), (C1), (R), (R)+1, 0, 0, RTK_EXANDF, RTK_SHRINK)
+
+	/* trigger settings */
+	ui->lbl_trig[0] = robtk_lbl_new("Level 1: ");
+	ui->lbl_trig[1] = robtk_lbl_new("Level 2: ");
+	ui->lbl_trig[2] = robtk_lbl_new("Time 1: ");
+	ui->lbl_trig[3] = robtk_lbl_new("Time 2: ");
+
+	for (uint32_t i = 0; i < 4; ++i) {
+		robtk_lbl_set_alignment(ui->lbl_trig[i], 1.0, 0.5);
+		TBLADD(robtk_lbl_widget(ui->lbl_trig[i]), 10, 11, 2+i);
+	}
+
+	ui->sel_trig_edge = robtk_select_new();
+	robtk_select_add_item(ui->sel_trig_edge, 1, "rising edge");
+	robtk_select_add_item(ui->sel_trig_edge, 2, "falling egde");
+	robtk_select_add_item(ui->sel_trig_edge, 3, "any edge");
+	robtk_select_set_callback(ui->sel_trig_edge, cb_set_trig_edge, ui);
+	TBLADD(robtk_select_widget(ui->sel_trig_edge), 10, 12, 1);
+
+	for (uint32_t i = 0; i < 2; ++i) {
+		ui->spb_trigger_lvl[i] = robtk_spin_new(-1.f, 1.f, .01);
+		robtk_spin_set_default(ui->spb_trigger_lvl[i], 0);
+		robtk_spin_set_value(ui->spb_trigger_lvl[i], 0);
+		robtk_spin_label_width(ui->spb_trigger_lvl[i], -1, 40);
+		robtk_spin_set_alignment(ui->spb_trigger_lvl[i], 0, .5);
+		robtk_spin_set_callback(ui->spb_trigger_lvl[i], cb_set_trig_values, ui);
+		TBLADD(robtk_spin_widget(ui->spb_trigger_lvl[i]), 11, 12, 2+i);
+
+		ui->spb_trigger_tme[i] = robtk_spin_new(0, MAXDELAY-1, 1);
+		robtk_spin_set_default(ui->spb_trigger_tme[i], 0);
+		robtk_spin_set_value(ui->spb_trigger_tme[i], 0);
+		robtk_spin_label_width(ui->spb_trigger_tme[i], -1, 40);
+		robtk_spin_set_alignment(ui->spb_trigger_tme[i], 0, .5);
+		robtk_spin_set_callback(ui->spb_trigger_tme[i], cb_set_trig_values, ui);
+		TBLADD(robtk_spin_widget(ui->spb_trigger_tme[i]), 11, 12, 4+i);
+	}
+
+	cb_set_trig_mode(NULL, ui);
 
 	rob_hbox_child_pack(ui->hbox, ui->ctable, FALSE, FALSE);
 	return ui->hbox;
@@ -650,15 +744,21 @@ cleanup(LV2UI_Handle handle)
 		robtk_cbtn_destroy(ui->btn_mute_in[i]);
 		robtk_lbl_destroy(ui->lbl_in[i]);
 		robtk_rbtn_destroy(ui->btn_trig_src[i]);
+		robtk_lbl_destroy(ui->lbl_trig[i]);
 	}
 	for (uint32_t i = 0; i < 3; ++i) {
 		robtk_spin_destroy(ui->spb_delay_out[i]);
 		robtk_lbl_destroy(ui->lbl_out[i]);
 	}
-	for (uint32_t i = 0; i < 8; ++i) {
+	for (uint32_t i = 0; i < 9; ++i) {
 		robtk_lbl_destroy(ui->label[i]);
 	}
+	for (uint32_t i = 0; i < 2; ++i) {
+		robtk_spin_destroy(ui->spb_trigger_lvl[i]);
+		robtk_spin_destroy(ui->spb_trigger_tme[i]);
+	}
 	robtk_select_destroy(ui->sel_trig_mode);
+	robtk_select_destroy(ui->sel_trig_edge);
 	cairo_surface_destroy(ui->routeT);
 	cairo_surface_destroy(ui->routeC);
 	cairo_surface_destroy(ui->routeE);
@@ -685,6 +785,7 @@ port_event(LV2UI_Handle handle,
 
 	if (format != 0) return;
 	const float v = *(float *)buffer;
+	const int vi = *(float *)buffer;
 	if (port >= MIXTRI_MIX_0_0 && port <= MIXTRI_MIX_3_2) {
 		const int d = port - MIXTRI_MIX_0_0;
 		ui->disable_signals = true;
@@ -709,6 +810,33 @@ port_event(LV2UI_Handle handle,
 		const int d = port - MIXTRI_DLY_O_0;
 		ui->disable_signals = true;
 		robtk_spin_set_value(ui->spb_delay_out[d], v);
+		ui->disable_signals = false;
+	}
+	else if (port >= MIXTRI_TRIG_CHN && port <= MIXTRI_TRIG_TME1) {
+		ui->disable_signals = true;
+		switch(port) {
+			case MIXTRI_TRIG_CHN:
+				if (vi >=0 && vi < 4) robtk_rbtn_set_active(ui->btn_trig_src[vi], true);
+				break;
+			case MIXTRI_TRIG_MODE:
+				robtk_select_set_active_item(ui->sel_trig_mode, vi);
+				break;
+			case MIXTRI_TRIG_EDGE:
+				robtk_select_set_active_item(ui->sel_trig_edge, vi);
+				break;
+			case MIXTRI_TRIG_LVL0:
+				robtk_spin_set_value(ui->spb_trigger_lvl[0], v);
+				break;
+			case MIXTRI_TRIG_LVL1:
+				robtk_spin_set_value(ui->spb_trigger_lvl[1], v);
+				break;
+			case MIXTRI_TRIG_TME0:
+				robtk_spin_set_value(ui->spb_trigger_tme[0], v);
+				break;
+			case MIXTRI_TRIG_TME1:
+				robtk_spin_set_value(ui->spb_trigger_tme[1], v);
+				break;
+		}
 		ui->disable_signals = false;
 	}
 }

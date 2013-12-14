@@ -37,6 +37,19 @@
 #define MAX(A,B) ( (A) > (B) ? (A) : (B) )
 #endif
 
+/******************************************************************************
+ * trigger helpers
+ */
+
+#define FIRE_TRIGGER (1.0)
+
+static inline bool edge_trigger(const int mode, const float lvl, const float v0, const float v1) {
+	if (   (mode&1) /* rising edge*/
+			&& (v0 <= lvl) && (v1 > lvl)) return true;
+	if (   (mode&2) /* falling edge*/
+			&& (v0 >= lvl) && (v1 < lvl)) return true;
+	return false;
+}
 
 /******************************************************************************
  * LV2 routines
@@ -63,6 +76,12 @@ typedef struct {
 	float* p_trigger_chn;
 	float* p_trigger_mode;
 
+	float* p_trigger_edge;
+	float* p_trigger_level0;
+	float* p_trigger_level1;
+	float* p_trigger_time0;
+	float* p_trigger_time1;
+
 	double rate;
 
 	/* internal state, delaylines */
@@ -85,6 +104,8 @@ typedef struct {
 	/* trigger state */
 	LTCDecoder *decoder;
 	uint64_t monotonic_cnt;
+	uint64_t ts_time;
+	float ts_prev;
 
 } MixTri;
 
@@ -101,6 +122,8 @@ instantiate(
 	}
 
 	self->rate = rate;
+
+	/* low/high pass filter time-constants */
 	// 1.0 - e^(-2.0 * π * v / 48000)
 	self->mix_alpha = 1.0f - expf(-2.0 * M_PI * 100 / rate); // LPF
 	self->flt_alpha = 1.0 - 5.0 / rate; // HPF
@@ -121,8 +144,11 @@ instantiate(
 		self->mix_z[i] = 0;
 	}
 
+	/* trigger settings & state*/
 	self->decoder = ltc_decoder_create(rate / 25, 8);
 	self->monotonic_cnt = 0;
+	self->ts_time = 0;
+	self->ts_prev = 0;
 	return (LV2_Handle)self;
 }
 
@@ -140,6 +166,21 @@ connect_port_mixtri(
 			break;
 		case MIXTRI_TRIG_MODE:
 			self->p_trigger_mode = (float*)data;
+			break;
+		case MIXTRI_TRIG_EDGE:
+			self->p_trigger_edge = (float*)data;
+			break;
+		case MIXTRI_TRIG_LVL0:
+			self->p_trigger_level0 = (float*)data;
+			break;
+		case MIXTRI_TRIG_LVL1:
+			self->p_trigger_level1 = (float*)data;
+			break;
+		case MIXTRI_TRIG_TME0:
+			self->p_trigger_time0 = (float*)data;
+			break;
+		case MIXTRI_TRIG_TME1:
+			self->p_trigger_time1 = (float*)data;
 			break;
 		default:
 			if (port >= MIXTRI_AUDIO_IN_0 && port <= MIXTRI_AUDIO_IN_3) {
@@ -169,6 +210,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 {
 	MixTri* self = (MixTri*)handle;
 
+	/* localize variable into scope */
 	float const * const * a_i = (float const * const *) self->a_in;
 	float * const * a_o = self->a_out;
 	float mix_t[12], mix[12];
@@ -179,6 +221,16 @@ run(LV2_Handle handle, uint32_t n_samples)
 	float amp_in_t[4], amp_in[4];
 	int cmode_in[4];
 	int pmode_in[4];
+
+	/* trigger settings*/
+	int   tt_edgemode = *self->p_trigger_edge;
+	float tt_level0   = *self->p_trigger_level0;
+	float tt_level1   = *self->p_trigger_level1;
+	uint64_t tt_tme0  = *self->p_trigger_time0;
+	uint64_t tt_tme1  = *self->p_trigger_time1;
+
+	float ts_prev = self->ts_prev;
+	float ts_time = self->ts_time;
 
 	const uint64_t monotonic_cnt = self->monotonic_cnt;
 	const float fade_len = (n_samples >= FADE_LEN) ? FADE_LEN : ceilf(n_samples / 2.f);
@@ -197,30 +249,35 @@ run(LV2_Handle handle, uint32_t n_samples)
 		flt_y[i] = self->flt_y[i];
 		cmode_in[i] = *(self->p_input[i]);
 		pmode_in[i] = self->mode_input[i];
+		amp_in_t[i] = self->gain_in[i];
+		amp_in[i] = self->amp_z[i];
 
 		delay_i[i] = *(self->p_delay[i]);
 		if (delay_i[i] != self->dly_i[i].c_dly) {
+			/* input delay time changed */
 			fade_i[i] = fade_len;
 		}
 		if (self->gain_db[i] != *(self->p_gain_in[i])) {
+			/* recalc gain only if changed */
 			self->gain_db[i] = *(self->p_gain_in[i]);
 			self->gain_in[i] = pow(10, .05 * self->gain_db[i]);
 		}
-		amp_in_t[i] = self->gain_in[i];
-		amp_in[i] = self->amp_z[i];
 	}
 
 	for (uint32_t i = 0; i < 3; ++i) {
 		delay_o[i] = *(self->p_delay[i+4]);
 		if (delay_o[i] != self->dly_o[i].c_dly) {
+			/* output delay-time changed */
 			fade_o[i] = fade_len;
 		}
 	}
 
 	/** prepare trigger output **/
 	switch (trigger_mode) {
-		case 1: // LTC - clear channel
-				memset(a_o[3], 0, sizeof(float) * n_samples);
+		case TRG_EDGE:
+		case TRG_LTC:
+			/* clear channel */
+			memset(a_o[3], 0, sizeof(float) * n_samples);
 			break;
 		default:
 			break;
@@ -300,16 +357,22 @@ run(LV2_Handle handle, uint32_t n_samples)
 		PREFILTER(ain, d_i, 2)
 		PREFILTER(ain, d_i, 3)
 
+		/* process trigger */
 		switch (trigger_mode) {
-			case 1:
+			case TRG_EDGE:
+				if (edge_trigger(tt_edgemode, tt_level0, ts_prev, d_i[trigger_chn])) {
+					a_o[3][n] = FIRE_TRIGGER;
+				}
+				break;
+			case TRG_LTC:
 				ltc_decoder_write_float(self->decoder, &d_i[trigger_chn], 1, n + monotonic_cnt);
 				break;
 			default:
 				a_o[3][n] = d_i[trigger_chn];
 				break;
 		}
+		ts_prev = d_i[trigger_chn];
 
-		// manually unroll loop?
 		for (uint32_t i = 0; i < 12; ++i) {
 			/* low-pass filter gain */
 			mix[i] += mix_alpha * (mix_t[i] - mix[i]);
@@ -328,13 +391,13 @@ run(LV2_Handle handle, uint32_t n_samples)
 
 	/* post-process trigger */
 	switch (trigger_mode) {
-		case 1: // LTC
+		case TRG_LTC:
 			{
 				LTCFrameExt frame;
 				while (ltc_decoder_read(self->decoder,&frame)) {
 					if (frame.off_end >= monotonic_cnt && frame.off_end < monotonic_cnt + n_samples) {
 						const int nf = frame.off_end - monotonic_cnt;
-						a_o[3][nf] = 1.0;
+						a_o[3][nf] = FIRE_TRIGGER;
 					}
 				}
 			}
@@ -370,6 +433,8 @@ run(LV2_Handle handle, uint32_t n_samples)
 			self->mix_z[i] = 0;
 		}
 	}
+	self->ts_time = ts_time;
+	self->ts_prev = ts_prev;
 	self->monotonic_cnt += n_samples;
 }
 
