@@ -181,7 +181,7 @@ cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     lv2:name "Trigger Edge Mode" ;
     lv2:minimum  0.0;
     lv2:maximum  3.0;
-    lv2:default  0.0;
+    lv2:default  1.0;
     lv2:portProperty lv2:integer ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint [ rdfs:label "off"; rdf:value 0.0 ; ] ;
