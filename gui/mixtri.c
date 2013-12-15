@@ -54,10 +54,12 @@ typedef struct {
 	RobTkSelect *sel_trig_edge;
 	RobTkSpin *spb_trigger_tme[2];
 	RobTkSpin *spb_trigger_lvl[2];
+	RobTkDarea *drawing_area;
+	RobTkCBtn *btn_show_doc;
 
 	bool disable_signals;
 
-	PangoFontDescription *font;
+	PangoFontDescription *font[2];
 
 	cairo_surface_t* routeT;
 	cairo_surface_t* routeC;
@@ -224,7 +226,7 @@ static void annotation_txt(MixTriUI *ui, RobTkDial * d, cairo_t *cr, const char 
 	int tw, th;
 	cairo_save(cr);
 	PangoLayout * pl = pango_cairo_create_layout(cr);
-	pango_layout_set_font_description(pl, ui->font);
+	pango_layout_set_font_description(pl, ui->font[0]);
 	pango_layout_set_text(pl, txt, -1);
 	pango_layout_get_pixel_size(pl, &tw, &th);
 	cairo_translate (cr, d->w_cx, d->w_height);
@@ -336,6 +338,419 @@ static bool box_expose_event(RobWidget* rw, cairo_t* cr, cairo_rectangle_t *ev) 
 }
 #endif
 
+static void draw_arrow (cairo_t *cr, float x, float y, bool down) {
+	cairo_save(cr);
+	cairo_set_source_rgba (cr, .95, 1.0, .95, .8);
+	cairo_set_line_width(cr, 1.0);
+	cairo_move_to(cr, x+.5, y+.5);
+	if (down) {
+		cairo_line_to(cr, x+.5, y+12.5);
+		cairo_stroke(cr);
+		cairo_move_to(cr, x+.5, y+12.5);
+		cairo_line_to(cr, x+3.5,  y+7.5);
+		cairo_line_to(cr, x-2.5,  y+7.5);
+		cairo_close_path(cr);
+		cairo_fill(cr);
+	} else {
+		cairo_line_to(cr, x+.5, y-11.5);
+		cairo_stroke(cr);
+		cairo_move_to(cr, x+.5, y-11.5);
+		cairo_line_to(cr, x+3.5,  y-6.5);
+		cairo_line_to(cr, x-2.5,  y-6.5);
+		cairo_close_path(cr);
+		cairo_fill(cr);
+	}
+	cairo_restore(cr);
+}
+
+static void draw_cross (cairo_t *cr, float x, float y) {
+	cairo_save(cr);
+	cairo_set_source_rgba (cr, .95, 1.0, .95, .8);
+	cairo_set_line_width(cr, 1.0);
+
+	cairo_move_to(cr, x-2.5, y-2.5);
+	cairo_line_to(cr, x+3.5, y+3.5);
+	cairo_stroke(cr);
+	cairo_move_to(cr, x+3.5, y-2.5);
+	cairo_line_to(cr, x-2.5, y+3.5);
+	cairo_stroke(cr);
+	cairo_restore(cr);
+}
+
+static void draw_timedelta (cairo_t *cr, float x, float y, float w, float dw) {
+	cairo_save(cr);
+	cairo_set_line_width(cr, 1.0);
+
+	if (dw > 0) {
+		cairo_set_source_rgba (cr, .95, 1.0, .95, .6);
+		cairo_rectangle(cr, x+w-dw+.5, y-2.5, dw*2, 6.0);
+		cairo_fill(cr);
+	}
+
+	cairo_set_source_rgba (cr, .95, 1.0, .95, .8);
+	cairo_move_to(cr, x+.5, y-2.5);
+	cairo_line_to(cr, x+.5, y+3.5);
+	cairo_stroke(cr);
+
+	cairo_move_to(cr, x+.5, y+.5);
+	cairo_line_to(cr, x+w+.5, y+.5);
+	cairo_stroke(cr);
+
+	cairo_move_to(cr, x+w+.5, y-1.5);
+	cairo_line_to(cr, x+w+.5, y+2.5);
+	cairo_stroke(cr);
+
+	cairo_restore(cr);
+}
+
+#define ANN_TEXT(txt) \
+	write_text_full(cr, txt, ui->font[1], 0, doc_h, 0, 6, c_wht);
+
+static void draw_trigger_doc (cairo_t *cr, void *d) {
+	MixTriUI* ui = (MixTriUI*) (d);
+	int mode = robtk_select_get_value(ui->sel_trig_mode);
+	int edge = robtk_select_get_value(ui->sel_trig_edge);
+
+	float c_bg[4];
+	get_color_from_theme(1, c_bg);
+
+	cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
+	CairoSetSouerceRGBA(c_bg);
+	cairo_rectangle (cr, 0, 0, 150, 180);
+	cairo_fill(cr);
+
+	cairo_set_source_rgba (cr, .1, .1, .1, 1.0);
+	cairo_rectangle (cr, 5, 0, 140, 180);
+	cairo_fill(cr);
+
+	cairo_set_operator (cr, CAIRO_OPERATOR_OVER);
+
+	cairo_save(cr);
+	cairo_translate(cr, 10, 5);
+	const float doc_w = 130;
+	const float doc_h = 175;
+	const float doc_b = 100;
+	cairo_rectangle(cr, 0, 0, doc_w, doc_h);
+	cairo_clip(cr);
+
+	/* grid */
+
+	cairo_set_line_width(cr, 1.5);
+	cairo_set_source_rgba (cr, .4, .4, .4, 1.0);
+
+	const double dash[] = {1.5};
+	cairo_set_line_width(cr, 1.0);
+	cairo_set_dash(cr, dash, 1, 0);
+
+	switch (mode) {
+		case TRG_PASSTRHU :
+		case TRG_RMS:
+		case TRG_LPF:
+			break;
+		default:
+			for (uint32_t i = 5; i < doc_w; i+=10) {
+				cairo_move_to(cr, i+.5, 0);
+				cairo_line_to(cr, i+.5, doc_b);
+				cairo_stroke(cr);
+			}
+			for (uint32_t i = 5; i < doc_b; i+=10) {
+				cairo_move_to(cr, 0, i+.5);
+				cairo_line_to(cr, doc_w, i+.5);
+				cairo_stroke(cr);
+			}
+			break;
+	}
+
+	cairo_set_dash(cr, NULL, 0, 0);
+
+	/* waveform */
+
+	cairo_set_source_rgba (cr, 1.0, .0, .0, 1.0);
+
+	switch (mode) {
+		case TRG_EDGE :
+		case TRG_WINDOW_ENTER:
+		case TRG_WINDOW_LEAVE:
+		case TRG_HYSTERESIS:
+		case TRG_DROPIN:
+			cairo_move_to(cr, 5, 60);
+			cairo_curve_to(cr, 15, 50, 20, 75, 25, 80);
+			cairo_curve_to(cr, 25, 80, 38, 90, 45, 70);
+			cairo_curve_to(cr, 45, 70, 60, 0, 87, 40);
+			cairo_curve_to(cr, 88, 40, 100, 75, 120, 25);
+			cairo_line_to(cr, 125, 8);
+			cairo_stroke(cr);
+			break;
+		case TRG_DROPOUT:
+			cairo_move_to(cr,  5.5, 75.5);
+			cairo_line_to(cr, 25.5, 75.5);
+			cairo_line_to(cr, 26.5, 25.5);
+			cairo_line_to(cr, 55.5, 25.5);
+			cairo_line_to(cr, 56.5, 75.5);
+			cairo_line_to(cr,125.5, 75.5);
+			cairo_stroke(cr);
+			break;
+		case TRG_RUNT:
+			cairo_move_to(cr,  5.5, 75.5);
+			cairo_line_to(cr, 15.5, 75.5);
+			cairo_line_to(cr, 16.5, 25.5);
+			cairo_line_to(cr, 35.5, 25.5);
+			cairo_line_to(cr, 36.5, 75.5);
+			cairo_line_to(cr, 55.5, 75.5);
+			cairo_line_to(cr, 56.5, 45.5);
+			cairo_line_to(cr, 75.5, 45.5);
+			cairo_line_to(cr, 76.5, 75.5);
+			cairo_line_to(cr, 95.5, 75.5);
+			cairo_line_to(cr, 96.5, 25.5);
+			cairo_line_to(cr,115.5, 25.5);
+			cairo_line_to(cr,116.5, 75.5);
+			cairo_line_to(cr,125.5, 75.5);
+			cairo_stroke(cr);
+			break;
+		case TRG_PULSEWIDTH:
+		case TRG_PULSETRAIN:
+			cairo_move_to(cr,  5.5, 25.5);
+			cairo_line_to(cr,  6.5, 75.5);
+			cairo_line_to(cr, 25.5, 75.5);
+			cairo_line_to(cr, 26.5, 25.5);
+			cairo_line_to(cr, 45.5, 25.5);
+			cairo_line_to(cr, 46.5, 75.5);
+			cairo_line_to(cr, 75.5, 75.5);
+			cairo_line_to(cr, 76.5, 25.5);
+			cairo_line_to(cr, 85.5, 25.5);
+			cairo_line_to(cr, 86.5, 75.5);
+			cairo_line_to(cr, 95.5, 75.5);
+			cairo_line_to(cr, 96.5, 25.5);
+			cairo_line_to(cr,115.5, 25.5);
+			cairo_line_to(cr,116.5, 75.5);
+			cairo_line_to(cr,125.5, 75.5);
+			cairo_stroke(cr);
+			break;
+		case TRG_LTC:
+			cairo_move_to(cr,  5.5, 25.5);
+			for (int i = 0; i < 80; i+=5) {
+				cairo_line_to(cr, i + 10.5, (i%10 == 0)? 25.5 : 75.5);
+				cairo_line_to(cr, i + 11.5, (i%10 != 0)? 25.5 : 75.5);
+			}
+			cairo_line_to(cr,95.5, 25.5);
+			cairo_line_to(cr,96.5, 75.5);
+			cairo_line_to(cr,105.5, 75.5);
+			cairo_line_to(cr,106.5, 25.5);
+			cairo_line_to(cr,110.5, 25.5);
+			cairo_line_to(cr,111.5, 75.5);
+			cairo_line_to(cr,115.5, 75.5);
+			cairo_line_to(cr,116.5, 25.5);
+			cairo_line_to(cr,125.5, 25.5);
+			cairo_line_to(cr,126.5, 75.5);
+			cairo_stroke(cr);
+			break;
+		case TRG_PASSTRHU:
+		case TRG_RMS:
+		case TRG_LPF:
+		default:
+			break;
+	}
+
+	/* settings & annotation */
+	switch (mode) {
+		case TRG_EDGE :
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 40.5);
+			cairo_line_to(cr, doc_w, 40.5);
+			cairo_stroke(cr);
+			if (edge&1) {
+				draw_arrow(cr, 60, 70, false);
+				draw_arrow(cr, 110, 10, true);
+			}
+			if (edge&2) {
+				draw_arrow(cr, 85, 70, false);
+			}
+			ANN_TEXT("Signal Edge Trigger\nFires when the signal\npasses 'Level 1'.");
+			break;
+		case TRG_PULSEWIDTH:
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 40.5);
+			cairo_line_to(cr, doc_w, 40.5);
+			cairo_stroke(cr);
+
+			draw_cross(cr,  5, 40);
+			draw_cross(cr, 25, 40);
+			draw_cross(cr, 45, 40);
+			draw_cross(cr, 75, 40);
+			draw_cross(cr, 85, 40);
+			draw_cross(cr, 95, 40);
+			draw_cross(cr,115, 40);
+
+			draw_timedelta(cr,  5, 80, 20, 5);
+			draw_timedelta(cr, 25, 90, 20, 5);
+			draw_timedelta(cr, 45, 80, 20, 5);
+			draw_timedelta(cr, 75, 90, 20, 5);
+			draw_timedelta(cr, 95, 80, 20, 5);
+
+			draw_arrow(cr, 25, 10, true);
+			draw_arrow(cr, 45, 10, true);
+			draw_arrow(cr,115, 10, true);
+
+			ANN_TEXT("Pulse Width\nLast edge-trigger occurred\nbetween min,max time ago.");
+			break;
+		case TRG_PULSETRAIN:
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 40.5);
+			cairo_line_to(cr, doc_w, 40.5);
+			cairo_stroke(cr);
+
+			draw_cross(cr,  5, 40);
+			draw_cross(cr, 25, 40);
+			draw_cross(cr, 45, 40);
+			draw_cross(cr, 75, 40);
+			draw_cross(cr, 85, 40);
+			draw_cross(cr, 95, 40);
+			draw_cross(cr,115, 40);
+
+			draw_timedelta(cr,  5, 80, 20, 5);
+			draw_timedelta(cr, 25, 90, 20, 5);
+			draw_timedelta(cr, 45, 80, 20, 5);
+			draw_timedelta(cr, 75, 90, 20, 5);
+
+			draw_arrow(cr, 70, 10, true);
+			draw_arrow(cr, 85, 10, true);
+
+			ANN_TEXT("Pulse Train\nNo edge-trigger for a given\ntime (max) or more than\none trigger for a given\ntime (min)\n");
+			break;
+		case TRG_WINDOW_ENTER:
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 35.5);
+			cairo_line_to(cr, doc_w, 35.5);
+			cairo_stroke(cr);
+			cairo_move_to(cr, 0, 45.5);
+			cairo_line_to(cr, doc_w, 45.5);
+			cairo_stroke(cr);
+
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .2);
+			cairo_rectangle(cr,  53, 35.5, 5, 10); cairo_fill(cr);
+			cairo_rectangle(cr,  84, 35.5, 6, 10); cairo_fill(cr);
+			cairo_rectangle(cr, 108, 35.5, 7, 10); cairo_fill(cr);
+
+			draw_arrow(cr, 53, 10, true);
+			draw_arrow(cr, 84, 10, true);
+			draw_arrow(cr,108, 70, false);
+			ANN_TEXT("Window Trigger\nSignal enters a given\nrange.");
+			break;
+		case TRG_WINDOW_LEAVE:
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 35.5);
+			cairo_line_to(cr, doc_w, 35.5);
+			cairo_stroke(cr);
+			cairo_move_to(cr, 0, 45.5);
+			cairo_line_to(cr, doc_w, 45.5);
+			cairo_stroke(cr);
+
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .2);
+			cairo_rectangle(cr,  53, 35.5, 5, 10); cairo_fill(cr);
+			cairo_rectangle(cr,  84, 35.5, 6, 10); cairo_fill(cr);
+			cairo_rectangle(cr, 108, 35.5, 7, 10); cairo_fill(cr);
+
+			draw_arrow(cr, 58, 10, true);
+			draw_arrow(cr, 90, 70, false);
+			draw_arrow(cr,115, 10, true);
+			ANN_TEXT("Window Trigger\nSignal leaves a given range");
+			break;
+		case TRG_HYSTERESIS:
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 35.5);
+			cairo_line_to(cr, doc_w, 35.5);
+			cairo_stroke(cr);
+			cairo_move_to(cr, 0, 65.5);
+			cairo_line_to(cr, doc_w, 65.5);
+			cairo_stroke(cr);
+			draw_arrow(cr, 58, 10, true);
+			ANN_TEXT("Hysteresis Trigger\nFire when signal crosses\nboth min,max in same\ndirection w/o interruption.");
+			break;
+		case TRG_RUNT:
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 40.5);
+			cairo_line_to(cr, doc_w, 40.5);
+			cairo_stroke(cr);
+			cairo_move_to(cr, 0, 60.5);
+			cairo_line_to(cr, doc_w, 60.5);
+			cairo_stroke(cr);
+			draw_arrow(cr, 75, 10, true);
+			ANN_TEXT("Runt Trigger\nFire if signal crosses\n1st but not\n2nd threshold.");
+			break;
+		case TRG_DROPOUT:
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 40.5);
+			cairo_line_to(cr, doc_w, 40.5);
+			cairo_stroke(cr);
+			cairo_move_to(cr, 0, 60.5);
+			cairo_line_to(cr, doc_w, 60.5);
+			cairo_stroke(cr);
+
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .2);
+			cairo_set_line_width(cr, 4.0);
+			cairo_move_to(cr, 25.5,     40.5);
+			cairo_line_to(cr, 25.5, 60.5);
+			cairo_stroke(cr);
+			cairo_move_to(cr, 55.5,     40.5);
+			cairo_line_to(cr, 55.5, 60.5);
+			cairo_stroke(cr);
+
+			draw_cross(cr,  25, 50);
+			draw_cross(cr,  55, 50);
+
+			draw_timedelta(cr, 25, 80, 40, 0);
+			draw_timedelta(cr, 55, 90, 40, 0);
+			draw_arrow(cr, 95, 10, true);
+			ANN_TEXT("Drop out\nSignal leaves a given range\nfor at least a given time.");
+			break;
+		case TRG_DROPIN:
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
+			cairo_move_to(cr, 0, 25.5);
+			cairo_line_to(cr, doc_w, 25.5);
+			cairo_stroke(cr);
+			cairo_move_to(cr, 0, 65.5);
+			cairo_line_to(cr, doc_w, 65.5);
+			cairo_stroke(cr);
+
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .2);
+			cairo_rectangle(cr, 48, 25.5, 70, 40);
+			cairo_fill(cr);
+
+			draw_timedelta(cr, 47, 65, 40, 0);
+			draw_arrow(cr, 87, 90, false);
+			ANN_TEXT("Drop in\nSignal enters a given range\nfor at least a given time.");
+			break;
+		case TRG_RMS:
+			ANN_TEXT("Calculate RMS\nIntegrate over\n'Time 1' samples");
+			break;
+			break;
+		case TRG_LPF:
+			ANN_TEXT("Low Pass Filter\n 1.0 / 'Time 1' Hz");
+			break;
+		case TRG_PASSTRHU:
+			ANN_TEXT("Signal Passthough");
+			break;
+		case TRG_LTC:
+			draw_arrow(cr, 85, 90, false);
+			ANN_TEXT("Linear Time Code\nLTC sync word.");
+			break;
+		default:
+			break;
+	}
+
+	cairo_restore(cr);
+}
+
+static bool cb_show_doc (RobWidget* handle, void *d) {
+	MixTriUI* ui = (MixTriUI*) (d);
+	if (robtk_cbtn_get_active(ui->btn_show_doc)) {
+		robwidget_show(ui->drawing_area->rw, true);
+	} else {
+		robwidget_hide(ui->drawing_area->rw, true);
+	}
+	return TRUE;
+}
+
 /******************************************************************************
  * UI callbacks
  */
@@ -378,6 +793,9 @@ static bool cb_set_trig_mode (RobWidget* handle, void *data) {
 			TRIGGERSENS(1,1,0,0,0);
 			break;
 	}
+	if (robtk_cbtn_get_active(ui->btn_show_doc)) {
+		robtk_darea_redraw(ui->drawing_area);
+	}
 	if (ui->disable_signals) return TRUE;
 	ui->write(ui->controller, MIXTRI_TRIG_MODE, sizeof(float), 0, (const void*) &mode);
 	return TRUE;
@@ -385,6 +803,9 @@ static bool cb_set_trig_mode (RobWidget* handle, void *data) {
 
 static bool cb_set_trig_edge (RobWidget* handle, void *data) {
 	MixTriUI* ui = (MixTriUI*) (data);
+	if (robtk_cbtn_get_active(ui->btn_show_doc)) {
+		robtk_darea_redraw(ui->drawing_area);
+	}
 	if (ui->disable_signals) return TRUE;
 	float mode = robtk_select_get_value(ui->sel_trig_edge);
 	ui->write(ui->controller, MIXTRI_TRIG_EDGE, sizeof(float), 0, (const void*) &mode);
@@ -411,7 +832,6 @@ static bool cb_set_trig_values (RobWidget* handle, void *data) {
 	if (ui->disable_signals) return TRUE;
 
 	val0 = robtk_spin_get_value(ui->spb_trigger_lvl[0]);
-	ui->write(ui->controller, MIXTRI_TRIG_LVL0, sizeof(float), 0, (const void*) &val0);
 	val1 = robtk_spin_get_value(ui->spb_trigger_lvl[1]);
 	if (val1 < val0) {
 		ui->disable_signals = true;
@@ -419,8 +839,8 @@ static bool cb_set_trig_values (RobWidget* handle, void *data) {
 		val1 = val0;
 	}
 	ui->write(ui->controller, MIXTRI_TRIG_LVL1, sizeof(float), 0, (const void*) &val1);
+	ui->write(ui->controller, MIXTRI_TRIG_LVL0, sizeof(float), 0, (const void*) &val0);
 	val0 = robtk_spin_get_value(ui->spb_trigger_tme[0]);
-	ui->write(ui->controller, MIXTRI_TRIG_TME0, sizeof(float), 0, (const void*) &val0);
 	val1 = robtk_spin_get_value(ui->spb_trigger_tme[1]);
 	if (val1 < val0) {
 		ui->disable_signals = true;
@@ -428,6 +848,7 @@ static bool cb_set_trig_values (RobWidget* handle, void *data) {
 		val1 = val0;
 	}
 	ui->write(ui->controller, MIXTRI_TRIG_TME1, sizeof(float), 0, (const void*) &val1);
+	ui->write(ui->controller, MIXTRI_TRIG_TME0, sizeof(float), 0, (const void*) &val0);
 	ui->disable_signals = false; // XXX
 	return TRUE;
 }
@@ -503,7 +924,8 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	robwidget_make_toplevel(ui->hbox, top);
 	ROBWIDGET_SETNAME(ui->hbox, "mixtri");
 
-	ui->font = pango_font_description_from_string("Mono 8");
+	ui->font[0] = pango_font_description_from_string("Mono 8");
+	ui->font[1] = pango_font_description_from_string("Sans 7");
 	create_faceplate(ui);
 
 	ui->label[0] = robtk_lbl_new("Delay [spl]");
@@ -652,16 +1074,16 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	robtk_select_set_alignment(ui->sel_trig_mode, .5, 0);
 	ui->sel_trig_mode->t_width = MIX_WIDTH - 36;
 	robtk_select_add_item(ui->sel_trig_mode, TRG_PASSTRHU, "-");
-	robtk_select_add_item(ui->sel_trig_mode, TRG_LTC, "LTC");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_EDGE, "Edge");
-	robtk_select_add_item(ui->sel_trig_mode, TRG_PULSEWIDTH, "Pulse Width");
-	robtk_select_add_item(ui->sel_trig_mode, TRG_PULSETRAIN, "Pulse Train");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_WINDOW_ENTER, "Enter Window");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_WINDOW_LEAVE, "Leave Window");
-	robtk_select_add_item(ui->sel_trig_mode, TRG_DROPOUT, "Dropout");
-	robtk_select_add_item(ui->sel_trig_mode, TRG_DROPIN, "Drop-in");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_HYSTERESIS, "Hysteresis");
+	robtk_select_add_item(ui->sel_trig_mode, TRG_DROPIN, "Drop-in");
+	robtk_select_add_item(ui->sel_trig_mode, TRG_DROPOUT, "Dropout");
+	robtk_select_add_item(ui->sel_trig_mode, TRG_PULSEWIDTH, "Pulse Width");
+	robtk_select_add_item(ui->sel_trig_mode, TRG_PULSETRAIN, "Pulse Train");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_RUNT, "Runt");
+	robtk_select_add_item(ui->sel_trig_mode, TRG_LTC, "LTC");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_RMS, "RMS");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_LPF, "LPF");
 	robtk_select_set_callback(ui->sel_trig_mode, cb_set_trig_mode, ui);
@@ -723,6 +1145,21 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 		robtk_spin_set_callback(ui->spb_trigger_tme[i], cb_set_trig_values, ui);
 		TBLADD(robtk_spin_widget(ui->spb_trigger_tme[i]), 11, 12, 4+i);
 	}
+
+	ui->btn_show_doc = robtk_cbtn_new("Show Doc", GBT_LED_LEFT, true);
+	robtk_cbtn_set_alignment(ui->btn_show_doc, 0, 0.5);
+	robtk_cbtn_set_color_on(ui->btn_show_doc,  .8, .8, .9);
+	robtk_cbtn_set_color_off(ui->btn_show_doc, .1, .1, .3);
+	robtk_cbtn_set_alignment(ui->btn_show_doc, .5, .5);
+	robtk_cbtn_set_active(ui->btn_show_doc, false);
+	robtk_cbtn_set_callback(ui->btn_show_doc, cb_show_doc, ui);
+	rob_table_attach(ui->ctable, robtk_cbtn_widget(ui->btn_show_doc),
+			10, 12, 6, 7, 0, 0, RTK_EXANDF, RTK_SHRINK);
+
+	ui->drawing_area = robtk_darea_new(150, 180, draw_trigger_doc, ui);
+	robwidget_hide(ui->drawing_area->rw, false);
+	rob_table_attach(ui->ctable, robtk_darea_widget(ui->drawing_area),
+			12, 13, 1, 6, 0, 0, RTK_EXANDF, RTK_SHRINK);
 
 	robtk_select_set_active_item(ui->sel_trig_edge, 0);
 	cb_set_trig_mode(NULL, ui);
@@ -807,7 +1244,11 @@ cleanup(LV2UI_Handle handle)
 	cairo_surface_destroy(ui->routeI);
 	cairo_surface_destroy(ui->delayI);
 	cairo_surface_destroy(ui->delayO);
-	pango_font_description_free(ui->font);
+	pango_font_description_free(ui->font[0]);
+	pango_font_description_free(ui->font[1]);
+
+	robtk_cbtn_destroy(ui->btn_show_doc);
+	robtk_darea_destroy(ui->drawing_area);
 
 	rob_box_destroy(ui->ctable);
 	rob_box_destroy(ui->hbox);
