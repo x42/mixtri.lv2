@@ -444,8 +444,6 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 
 	switch (mode) {
 		case TRG_PASSTRHU :
-		case TRG_RMS:
-		case TRG_LPF:
 			break;
 		default:
 			for (uint32_t i = 5; i < doc_w; i+=10) {
@@ -548,9 +546,25 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr,126.5, 25.5);
 			cairo_stroke(cr);
 			break;
-		case TRG_PASSTRHU:
-		case TRG_RMS:
 		case TRG_LPF:
+			cairo_move_to(cr,  5.5, 50);
+			{
+				float phase = 0;
+				for (uint32_t i = 1; i < 120; ++i) {
+					phase+=.05 + .4 * i / 120.0;
+					cairo_line_to(cr, i + 5.5, 50 + 40.0 * sinf(phase));
+				}
+			}
+			cairo_stroke(cr);
+			break;
+		case TRG_RMS:
+			cairo_move_to(cr,  5.5, 50);
+			for (uint32_t i = 1; i < 120; ++i) {
+				cairo_line_to(cr, i + 5.5, 50 + 40.0 * sinf(i * .2));
+			}
+			cairo_stroke(cr);
+			break;
+		case TRG_PASSTRHU:
 		default:
 			break;
 	}
@@ -739,10 +753,33 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			ANN_TEXT("Drop in\n Signal remains within a\n given range for at least\n 'Time 1'.");
 			break;
 		case TRG_RMS:
+			cairo_set_source_rgba (cr, .0, 0.5, 1.0, .8);
+			cairo_move_to(cr,  5.5, 50);
+			{
+				float ts_prev = 0;
+				for (uint32_t i = 1; i < 120; ++i) {
+					const float y0 = sinf(i * .2);
+					ts_prev += .02 * (y0 * y0 - ts_prev);
+					cairo_line_to(cr, i + 5.5, 50 - 40.0 * sqrtf(ts_prev));
+				}
+			}
+			cairo_stroke(cr);
 			ANN_TEXT("Calculate RMS\n Integrate over\n 'Time 1' samples");
 			break;
-			break;
 		case TRG_LPF:
+			cairo_set_source_rgba (cr, .0, 0.5, 1.0, .8);
+			cairo_move_to(cr,  5.5, 50);
+			{
+				float ts_prev = 0;
+				float phase = 0;
+				for (uint32_t i = 1; i < 120; ++i) {
+					phase+=.05 + .4 * i / 120.0;
+					const float y0 = sinf(phase);
+					ts_prev += .1 * (y0 - ts_prev);
+					cairo_line_to(cr, i + 5.5, 50 + 50.0 * ts_prev);
+				}
+			}
+			cairo_stroke(cr);
 			ANN_TEXT("Low Pass Filter\n 1.0 / 'Time 1' Hz");
 			break;
 		case TRG_PASSTRHU:
