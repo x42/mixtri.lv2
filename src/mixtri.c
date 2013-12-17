@@ -268,7 +268,6 @@ run(LV2_Handle handle, uint32_t n_samples)
 		ts_hysteresis = 0;
 		switch(trigger_mode) {
 			case TRG_PULSETRAIN:
-			case TRG_DROPIN:
 			case TRG_DROPOUT:
 				ts_time = 1e18;
 				break;
@@ -509,12 +508,12 @@ run(LV2_Handle handle, uint32_t n_samples)
 						if (ts_time == 0) {
 							ts_time = monotonic_cnt + n;
 						}
-					} else {
+					} else if (rt&4) {
 						// out of range -- reset count
 						ts_time = 0;
 					}
 				}
-				if (monotonic_cnt + n > ts_time + tt_tme0) {
+				if (ts_time > 0 && monotonic_cnt + n >= ts_time + tt_tme0) {
 					a_o[3][n] = FIRE_TRIGGER;
 					ts_time = 1e18;
 				}
