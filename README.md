@@ -34,3 +34,4 @@ Screenshots
 
 ![screenshot](https://raw.github.com/x42/mixtri.lv2/master/img/mixtrix.png "MixTri Window")
 ![screenshot](https://raw.github.com/x42/mixtri.lv2/master/img/mixtri.png "LTC example")
+![screenshot](https://raw.github.com/x42/mixtri.lv2/master/img/trigger_modes3.png "Trigger Modes")

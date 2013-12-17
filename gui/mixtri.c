@@ -469,11 +469,19 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 		case TRG_EDGE :
 		case TRG_WINDOW_ENTER:
 		case TRG_WINDOW_LEAVE:
-		case TRG_HYSTERESIS:
-		case TRG_DROPIN:
 			cairo_move_to(cr, 5, 60);
 			cairo_curve_to(cr, 15, 50, 20, 75, 25, 80);
 			cairo_curve_to(cr, 25, 80, 38, 90, 45, 70);
+			cairo_curve_to(cr, 45, 70, 60, 0, 87, 40);
+			cairo_curve_to(cr, 88, 40, 100, 75, 120, 25);
+			cairo_line_to(cr, 125, 8);
+			cairo_stroke(cr);
+			break;
+		case TRG_DROPIN:
+		case TRG_HYSTERESIS:
+			cairo_move_to(cr, 5, 20);
+			cairo_curve_to(cr, 18, 40, 22, 75, 30, 80);
+			cairo_curve_to(cr, 30, 80, 38, 90, 45, 70);
 			cairo_curve_to(cr, 45, 70, 60, 0, 87, 40);
 			cairo_curve_to(cr, 88, 40, 100, 75, 120, 25);
 			cairo_line_to(cr, 125, 8);
@@ -500,9 +508,11 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, 76.5, 75.5);
 			cairo_line_to(cr, 95.5, 75.5);
 			cairo_line_to(cr, 96.5, 25.5);
-			cairo_line_to(cr,115.5, 25.5);
-			cairo_line_to(cr,116.5, 75.5);
-			cairo_line_to(cr,125.5, 75.5);
+			cairo_line_to(cr,105.5, 25.5);
+			cairo_line_to(cr,106.5, 55.5);
+			cairo_line_to(cr,115.5, 55.5);
+			cairo_line_to(cr,116.5, 25.5);
+			cairo_line_to(cr,125.5, 25.5);
 			cairo_stroke(cr);
 			break;
 		case TRG_PULSEWIDTH:
@@ -577,11 +587,11 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, doc_w, 40.5);
 			cairo_stroke(cr);
 			if (edge&1) {
-				draw_arrow(cr, 60, 70, false);
-				draw_arrow(cr, 110, 10, true);
+				draw_arrow(cr, 55, 70, false);
+				draw_arrow(cr, 112, 70, false);
 			}
 			if (edge&2) {
-				draw_arrow(cr, 85, 70, false);
+				draw_arrow(cr, 85, 10, true);
 			}
 			ANN_TEXT("Signal Edge Trigger\n Fires when the signal\n passes 'Level 1'.");
 			break;
@@ -591,25 +601,46 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, doc_w, 40.5);
 			cairo_stroke(cr);
 
-			draw_cross(cr,  5, 40);
-			draw_cross(cr, 25, 40);
-			draw_cross(cr, 45, 40);
-			draw_cross(cr, 75, 40);
-			draw_cross(cr, 85, 40);
-			draw_cross(cr, 95, 40);
-			draw_cross(cr,115, 40);
+			if (edge & 1) {
+				draw_cross(cr, 25, 40);
+				draw_cross(cr, 75, 40);
+				draw_cross(cr, 95, 40);
+			}
 
-			draw_timedelta(cr,  5, 80, 20, 5);
-			draw_timedelta(cr, 25, 90, 20, 5);
-			draw_timedelta(cr, 45, 80, 20, 5);
-			draw_timedelta(cr, 75, 90, 20, 5);
-			draw_timedelta(cr, 95, 80, 20, 5);
+			if (edge & 2) {
+				draw_cross(cr,  5, 40);
+				draw_cross(cr, 45, 40);
+				draw_cross(cr, 85, 40);
+				draw_cross(cr,115, 40);
+			}
 
-			draw_arrow(cr, 25, 10, true);
-			draw_arrow(cr, 45, 10, true);
-			draw_arrow(cr,115, 10, true);
+			switch (edge) {
+				case 1:
+					draw_timedelta(cr, 25, 90, 20, 5);
+					draw_timedelta(cr, 75, 90, 20, 5);
+					draw_arrow(cr,95, 20, false);
+					break;
+				case 2:
+					draw_timedelta(cr,  5, 80, 40, 5);
+					draw_timedelta(cr, 45, 90, 40, 5);
+					draw_arrow(cr, 45, 10, true);
+					draw_arrow(cr, 85, 10, true);
+					break;
+				case 3:
+					draw_timedelta(cr,  5, 80, 20, 5);
+					draw_timedelta(cr, 25, 90, 20, 5);
+					draw_timedelta(cr, 45, 80, 20, 5);
+					draw_timedelta(cr, 75, 90, 20, 5);
+					draw_timedelta(cr, 85, 90, 20, 5);
+					draw_timedelta(cr, 95, 80, 20, 5);
 
-			ANN_TEXT("Pulse Width\n Last edge-trigger occurred\n sometime between\n min,max time ago.");
+					draw_arrow(cr, 25, 20, false);
+					draw_arrow(cr, 45, 10, true);
+					draw_arrow(cr,115, 10, true);
+					break;
+			}
+
+			ANN_TEXT("Pulse Width\n Last edge-trigger\n occurred between\n min,max time ago.");
 			break;
 		case TRG_PULSETRAIN:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -617,21 +648,42 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, doc_w, 40.5);
 			cairo_stroke(cr);
 
-			draw_cross(cr,  5, 40);
-			draw_cross(cr, 25, 40);
-			draw_cross(cr, 45, 40);
-			draw_cross(cr, 75, 40);
-			draw_cross(cr, 85, 40);
-			draw_cross(cr, 95, 40);
-			draw_cross(cr,115, 40);
+			if (edge & 1) {
+				draw_cross(cr, 25, 40);
+				draw_cross(cr, 75, 40);
+				draw_cross(cr, 95, 40);
+			}
+			if (edge & 2) {
+				draw_cross(cr,  5, 40);
+				draw_cross(cr, 45, 40);
+				draw_cross(cr, 85, 40);
+				draw_cross(cr,115, 40);
+			}
 
-			draw_timedelta(cr,  5, 80, 20, 5);
-			draw_timedelta(cr, 25, 90, 20, 5);
-			draw_timedelta(cr, 45, 80, 20, 5);
-			draw_timedelta(cr, 75, 90, 20, 5);
+			switch (edge) {
+				case 1:
+					draw_timedelta(cr, 25, 90, 20, 5);
+					draw_timedelta(cr, 75, 90, 20, 5);
+					draw_timedelta(cr, 95, 80, 20, 5);
+					draw_arrow(cr, 50, 20, false);
+					draw_arrow(cr,120, 20, false);
+					break;
+				case 2:
+					draw_timedelta(cr,  5, 80, 40, 5);
+					draw_timedelta(cr, 45, 90, 40, 5);
+					draw_timedelta(cr, 85, 80, 40, 5);
+					draw_arrow(cr,115, 10, true);
+					break;
+				case 3:
+					draw_timedelta(cr,  5, 80, 20, 5);
+					draw_timedelta(cr, 25, 90, 20, 5);
+					draw_timedelta(cr, 45, 80, 20, 5);
+					draw_timedelta(cr, 75, 90, 20, 5);
 
-			draw_arrow(cr, 70, 10, true);
-			draw_arrow(cr, 85, 10, true);
+					draw_arrow(cr, 70, 10, true);
+					draw_arrow(cr, 85, 20, false);
+					break;
+			}
 
 			ANN_TEXT("Pulse Train\n No edge-trigger for a given\n time (max) or more than\n one trigger for a given\n time (min).");
 			break;
@@ -650,7 +702,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_rectangle(cr, 108, 35.5, 7, 10); cairo_fill(cr);
 
 			if (edge&1) {
-				draw_arrow(cr, 53, 10, true);
+				draw_arrow(cr, 53, 70, false);
 				draw_arrow(cr,108, 70, false);
 			}
 			if (edge&2) {
@@ -671,12 +723,12 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			if (edge&1) {
 				cairo_rectangle(cr,  53, 35.5, 5, 10); cairo_fill(cr);
 				cairo_rectangle(cr, 108, 35.5, 7, 10); cairo_fill(cr);
-				draw_arrow(cr, 58, 10, true);
-				draw_arrow(cr, 90, 70, false);
+				draw_arrow(cr, 58, 70, false);
+				draw_arrow(cr,115, 70, false);
 			}
 			if (edge&2) {
 				cairo_rectangle(cr,  84, 35.5, 6, 10); cairo_fill(cr);
-				draw_arrow(cr,115, 10, true);
+				draw_arrow(cr, 90, 10, true);
 			}
 
 			ANN_TEXT("Window Trigger\n Signal leaves a given\n range.");
@@ -690,9 +742,11 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, doc_w, 65.5);
 			cairo_stroke(cr);
 			if (edge&1) {
-				draw_arrow(cr, 58, 10, true);
+				draw_arrow(cr, 58, 80, false);
 			}
-			// TODO  falling edge example ?!
+			if (edge&2) {
+				draw_arrow(cr, 23, 10, true);
+			}
 			ANN_TEXT("Hysteresis Trigger\n Fire when signal crosses\n both min,max in same\n direction w/o interruption.");
 			break;
 		case TRG_RUNT:
@@ -703,7 +757,12 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_move_to(cr, 0, 60.5);
 			cairo_line_to(cr, doc_w, 60.5);
 			cairo_stroke(cr);
-			draw_arrow(cr, 75, 10, true);
+			if (edge & 1) {
+				draw_arrow(cr, 75, 90, false);
+			}
+			if (edge & 2) {
+				draw_arrow(cr, 115, 10, true);
+			}
 			ANN_TEXT("Runt Trigger\n Fire if signal crosses 1st,\n but not 2nd threshold.");
 			break;
 		case TRG_DROPOUT:
@@ -724,32 +783,57 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, 55.5, 60.5);
 			cairo_stroke(cr);
 
-			draw_cross(cr,  25, 50);
-			draw_cross(cr,  55, 50);
+			if (edge & 1) {
+				draw_cross(cr,  25, 50);
+				draw_timedelta(cr, 25, 80, 40, 0);
+			}
+			if (edge & 2) {
+				draw_cross(cr,  55, 50);
+				draw_timedelta(cr, 55, 90, 40, 0);
+			}
+			if (edge == 1) {
+				draw_arrow(cr, 65, 100, false);
+			} else {
+				draw_arrow(cr, 95, 10, true);
+			}
 
-			draw_timedelta(cr, 25, 80, 40, 0);
-			draw_timedelta(cr, 55, 90, 40, 0);
-			draw_arrow(cr, 95, 10, true);
 			ANN_TEXT("Drop out\n Signal does not pass\n though a given range\n for at least 'Time 1'.");
 			break;
 		case TRG_DROPIN:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
-			cairo_move_to(cr, 0, 25.5);
-			cairo_line_to(cr, doc_w, 25.5);
-			cairo_stroke(cr);
 			cairo_move_to(cr, 0, 65.5);
 			cairo_line_to(cr, doc_w, 65.5);
 			cairo_stroke(cr);
+			cairo_move_to(cr, 0, 25.5);
+			cairo_line_to(cr, doc_w, 25.5);
+			cairo_stroke(cr);
 
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .2);
-			cairo_rectangle(cr, 48, 25.5, 70, 40);
-			cairo_fill(cr);
-
-			if (edge&1) {
-				draw_timedelta(cr, 47, 65, 40, 0);
-				draw_arrow(cr, 87, 90, false);
+			switch(edge) {
+				case 1:
+					cairo_rectangle(cr, 48, 25.5, 70, 40);
+					cairo_fill(cr);
+					draw_timedelta(cr, 47, 65, 40, 0);
+					draw_arrow(cr, 87, 90, false);
+					break;
+				case 2:
+					cairo_rectangle(cr, 8, 25.5, 15, 40);
+					cairo_fill(cr);
+					draw_timedelta(cr, 8, 65, 10, 0);
+					draw_arrow(cr, 18, 10, true);
+					break;
+				case 3:
+					cairo_rectangle(cr, 8, 25.5, 15, 40);
+					cairo_fill(cr);
+					cairo_rectangle(cr, 48, 25.5, 70, 40);
+					cairo_fill(cr);
+					draw_timedelta(cr, 47, 65, 10, 0);
+					draw_timedelta(cr, 8, 65, 10, 0);
+					draw_arrow(cr, 18, 10, true);
+					draw_arrow(cr, 57, 90, false);
+					break;
 			}
-			// TODO falling edge example.
+
 			ANN_TEXT("Drop in\n Signal remains within a\n given range for at least\n 'Time 1'.");
 			break;
 		case TRG_RMS:
