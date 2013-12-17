@@ -1175,6 +1175,7 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 				3, 4, i+1, i+2, 0, 0, RTK_SHRINK, RTK_SHRINK);
 
 		ui->spb_delay_in[i]  = robtk_spin_new(0, MAXDELAY-1, 1);
+		ui->spb_delay_in[i]->dial->displaymode = 3;
 		robtk_spin_set_default(ui->spb_delay_in[i], 0);
 		robtk_spin_set_value(ui->spb_delay_in[i], 0);
 		robtk_spin_set_callback(ui->spb_delay_in[i], cb_set_delay, ui);
@@ -1198,6 +1199,7 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 				5+i, 6+i, 6, 7, 0, 0, RTK_EXANDF, RTK_SHRINK);
 
 		ui->spb_delay_out[i] = robtk_spin_new(0, MAXDELAY-1, 1);
+		ui->spb_delay_out[i]->dial->displaymode = 3;
 		robtk_spin_set_callback(ui->spb_delay_out[i], cb_set_delay, ui);
 		robtk_spin_set_default(ui->spb_delay_out[i], 0);
 		robtk_spin_set_value(ui->spb_delay_out[i], 0);
@@ -1278,6 +1280,7 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 		TBLADD(robtk_spin_widget(ui->spb_trigger_lvl[i]), 11, 12, 2+i);
 
 		ui->spb_trigger_tme[i] = robtk_spin_new(0, MAXDELAY-1, 1);
+		ui->spb_trigger_tme[i]->dial->displaymode = 3;
 		robtk_spin_set_default(ui->spb_trigger_tme[i], 0);
 		robtk_spin_set_value(ui->spb_trigger_tme[i], 0);
 		robtk_spin_label_width(ui->spb_trigger_tme[i], -1, 50); // XXX
