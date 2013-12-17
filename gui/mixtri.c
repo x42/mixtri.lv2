@@ -593,7 +593,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			if (edge&2) {
 				draw_arrow(cr, 85, 10, true);
 			}
-			ANN_TEXT("Signal Edge Trigger\n Fires when the signal\n passes 'Level 1'.");
+			ANN_TEXT("Signal Edge\n Signal passes 'Level 1'.");
 			break;
 		case TRG_PULSEWIDTH:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -640,7 +640,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 					break;
 			}
 
-			ANN_TEXT("Pulse Width\n Last edge-trigger\n occurred between\n min,max time ago.");
+			ANN_TEXT("Pulse Width\n Last edge-trigger\n occurred between min\n and max (Time 1, 2) ago.");
 			break;
 		case TRG_PULSETRAIN:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -685,7 +685,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 					break;
 			}
 
-			ANN_TEXT("Pulse Train\n No edge-trigger for a given\n time (max) or more than\n one trigger for a given\n time (min).");
+			ANN_TEXT("Pulse Train\n No edge-trigger for a\n given time (max, Time 2),\n or more than one trigger\n since a given time (min,\n Time 1).");
 			break;
 		case TRG_WINDOW_ENTER:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -696,7 +696,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, doc_w, 45.5);
 			cairo_stroke(cr);
 
-			cairo_set_source_rgba (cr, .0, 1.0, .0, .2);
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .4);
 			cairo_rectangle(cr,  53, 35.5, 5, 10); cairo_fill(cr);
 			cairo_rectangle(cr,  84, 35.5, 6, 10); cairo_fill(cr);
 			cairo_rectangle(cr, 108, 35.5, 7, 10); cairo_fill(cr);
@@ -708,7 +708,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			if (edge&2) {
 				draw_arrow(cr, 84, 10, true);
 			}
-			ANN_TEXT("Window Trigger\n Signal enters a given\n range.");
+			ANN_TEXT("Enter Window\n Signal enters a given\n range (Level 1,2).");
 			break;
 		case TRG_WINDOW_LEAVE:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -719,7 +719,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, doc_w, 45.5);
 			cairo_stroke(cr);
 
-			cairo_set_source_rgba (cr, .0, 1.0, .0, .2);
+			cairo_set_source_rgba (cr, .0, 1.0, .0, .4);
 			if (edge&1) {
 				cairo_rectangle(cr,  53, 35.5, 5, 10); cairo_fill(cr);
 				cairo_rectangle(cr, 108, 35.5, 7, 10); cairo_fill(cr);
@@ -731,7 +731,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 				draw_arrow(cr, 90, 10, true);
 			}
 
-			ANN_TEXT("Window Trigger\n Signal leaves a given\n range.");
+			ANN_TEXT("Leave Window\n Signal leaves a given\n range (Level 1,2).");
 			break;
 		case TRG_HYSTERESIS:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -747,7 +747,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			if (edge&2) {
 				draw_arrow(cr, 23, 10, true);
 			}
-			ANN_TEXT("Hysteresis Trigger\n Fire when signal crosses\n both min,max in same\n direction w/o interruption.");
+			ANN_TEXT("Hysteresis\n Signal crosses both min\n and max (Level 1,2) in\n same direction without\n interruption.");
 			break;
 		case TRG_RUNT:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -763,7 +763,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			if (edge & 2) {
 				draw_arrow(cr, 115, 10, true);
 			}
-			ANN_TEXT("Runt Trigger\n Fire if signal crosses 1st,\n but not 2nd threshold.");
+			ANN_TEXT("Runt\n Fire if signal crosses 1st,\n but not 2nd threshold.");
 			break;
 		case TRG_DROPOUT:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -797,7 +797,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 				draw_arrow(cr, 95, 10, true);
 			}
 
-			ANN_TEXT("Drop out\n Signal does not pass\n though a given range\n for at least 'Time 1'.");
+			ANN_TEXT("Dropout\n Signal does not pass\n though a given range\n for at least 'Time 1'.");
 			break;
 		case TRG_DROPIN:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -834,7 +834,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 					break;
 			}
 
-			ANN_TEXT("Drop in\n Signal remains within a\n given range for at least\n 'Time 1'.");
+			ANN_TEXT("Constrained\n Signal remains within a\n given range for at least\n 'Time 1'.");
 			break;
 		case TRG_RMS:
 			cairo_set_source_rgba (cr, .0, 0.5, 1.0, .8);
@@ -848,7 +848,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 				}
 			}
 			cairo_stroke(cr);
-			ANN_TEXT("Calculate RMS\n Integrate over\n 'Time 1' samples");
+			ANN_TEXT("Calculate RMS\n time constant\n 'Time 1'");
 			break;
 		case TRG_LPF:
 			cairo_set_source_rgba (cr, .0, 0.5, 1.0, .8);
@@ -1220,7 +1220,7 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	robtk_select_add_item(ui->sel_trig_mode, TRG_WINDOW_ENTER, "Enter Window");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_WINDOW_LEAVE, "Leave Window");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_HYSTERESIS, "Hysteresis");
-	robtk_select_add_item(ui->sel_trig_mode, TRG_DROPIN, "Drop-in");
+	robtk_select_add_item(ui->sel_trig_mode, TRG_DROPIN, "Constrained");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_DROPOUT, "Dropout");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_PULSEWIDTH, "Pulse Width");
 	robtk_select_add_item(ui->sel_trig_mode, TRG_PULSETRAIN, "Pulse Train");
