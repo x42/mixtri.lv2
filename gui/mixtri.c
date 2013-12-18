@@ -696,16 +696,17 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			cairo_line_to(cr, doc_w, 45.5);
 			cairo_stroke(cr);
 
-			cairo_set_source_rgba (cr, .0, 1.0, .0, .4);
-			cairo_rectangle(cr,  53, 35.5, 5, 10); cairo_fill(cr);
-			cairo_rectangle(cr,  84, 35.5, 6, 10); cairo_fill(cr);
-			cairo_rectangle(cr, 108, 35.5, 7, 10); cairo_fill(cr);
 
 			if (edge&1) {
+				cairo_set_source_rgba (cr, .0, 1.0, .0, .4);
+				cairo_rectangle(cr,  53, 35.5, 5, 10); cairo_fill(cr);
+				cairo_rectangle(cr, 108, 35.5, 7, 10); cairo_fill(cr);
 				draw_arrow(cr, 53, 70, false);
 				draw_arrow(cr,108, 70, false);
 			}
 			if (edge&2) {
+				cairo_set_source_rgba (cr, .0, 1.0, .0, .4);
+				cairo_rectangle(cr,  84, 35.5, 6, 10); cairo_fill(cr);
 				draw_arrow(cr, 84, 10, true);
 			}
 			ANN_TEXT("Enter Window\n Signal enters a given\n range (Level 1, 2).");
