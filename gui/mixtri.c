@@ -708,7 +708,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			if (edge&2) {
 				draw_arrow(cr, 84, 10, true);
 			}
-			ANN_TEXT("Enter Window\n Signal enters a given\n range (Level 1,2).");
+			ANN_TEXT("Enter Window\n Signal enters a given\n range (Level 1, 2).");
 			break;
 		case TRG_WINDOW_LEAVE:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -731,7 +731,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 				draw_arrow(cr, 90, 10, true);
 			}
 
-			ANN_TEXT("Leave Window\n Signal leaves a given\n range (Level 1,2).");
+			ANN_TEXT("Leave Window\n Signal leaves a given\n range (Level 1, 2).");
 			break;
 		case TRG_HYSTERESIS:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
@@ -747,7 +747,7 @@ static void draw_trigger_doc (cairo_t *cr, void *d) {
 			if (edge&2) {
 				draw_arrow(cr, 23, 10, true);
 			}
-			ANN_TEXT("Hysteresis\n Signal crosses both min\n and max (Level 1,2) in\n same direction without\n interruption.");
+			ANN_TEXT("Hysteresis\n Signal crosses both min\n and max (Level 1, 2) in\n the same direction\n without interruption.");
 			break;
 		case TRG_RUNT:
 			cairo_set_source_rgba (cr, .0, 1.0, .0, .8);
