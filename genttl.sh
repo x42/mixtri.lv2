@@ -157,7 +157,7 @@ cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     lv2:name "Trigger Channel" ;
     lv2:minimum  0.0;
     lv2:maximum  3.0;
-    lv2:default  4.0;
+    lv2:default  3.0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -189,12 +189,11 @@ cat >> lv2ttl/mixtri.lv2.ttl.in << EOF
     lv2:index $(($IDX + 2));
     lv2:symbol "trigger_edge" ;
     lv2:name "Trigger Edge Mode" ;
-    lv2:minimum  0.0;
+    lv2:minimum  1.0;
     lv2:maximum  3.0;
     lv2:default  1.0;
     lv2:portProperty lv2:integer ;
     lv2:portProperty lv2:enumeration ;
-    lv2:scalePoint [ rdfs:label "off"; rdf:value 0.0 ; ] ;
     lv2:scalePoint [ rdfs:label "rising-edge"; rdf:value 1.0 ; ] ;
     lv2:scalePoint [ rdfs:label "falling-edge"; rdf:value 2.0 ; ] ;
     lv2:scalePoint [ rdfs:label "any-edge"; rdf:value 3.0 ; ] ;
