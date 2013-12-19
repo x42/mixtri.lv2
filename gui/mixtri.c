@@ -1361,6 +1361,7 @@ cleanup(LV2UI_Handle handle)
 		robtk_dial_destroy(ui->dial_mix[i]);
 	}
 	for (uint32_t i = 0; i < 4; ++i) {
+		robtk_dial_destroy(ui->dial_in[i]);
 		robtk_spin_destroy(ui->spb_delay_in[i]);
 		robtk_cbtn_destroy(ui->btn_hpfilt_in[i]);
 		robtk_cbtn_destroy(ui->btn_mute_in[i]);
