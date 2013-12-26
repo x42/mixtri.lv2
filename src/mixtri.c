@@ -235,8 +235,8 @@ run(LV2_Handle handle, uint32_t n_samples)
 	float const * const * a_i = (float const * const *) self->a_in;
 	float * const * a_o = self->a_out;
 	float mix_t[12], mix[12];
-	int fade_i[4] = { 0, 0, 0, 0};
-	int fade_o[3] = { 0, 0, 0};
+	uint32_t fade_i[4] = { 0, 0, 0, 0};
+	uint32_t fade_o[3] = { 0, 0, 0};
 	int delay_i[4], delay_o[3];
 	float flt_z[4], flt_y[4];
 	float amp_in_t[4], amp_in[4];
@@ -255,7 +255,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 	int ts_hysteresis = self->ts_hysteresis;
 
 	const uint64_t monotonic_cnt = self->monotonic_cnt;
-	const float fade_len = (n_samples >= FADE_LEN) ? FADE_LEN : ceilf(n_samples / 2.f);
+	const uint32_t fade_len = (n_samples >= FADE_LEN) ? FADE_LEN : ceilf(n_samples / 2.f);
 	const float flt_alpha = self->flt_alpha;
 	const float mix_alpha = self->mix_alpha;
 	const int trigger_mode = *self->p_trigger_mode;
@@ -359,7 +359,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 				self->dly_ ## IO[CHN].buffer[ self->dly_ ## IO[CHN].w_ptr ] = IN; \
 				OUT = self->dly_ ## IO[CHN].buffer[ self->dly_ ## IO[CHN].r_ptr ] * gain; \
 				DELAYLINE_INC(IN, OUT, IO, CHN) \
-			} \
+			} else \
 			if (n == fade_ ## IO[CHN]) { \
 				/* switch read pointer */ \
 				self->dly_ ## IO[CHN].r_ptr += self->dly_ ## IO[CHN].c_dly - delay_ ## IO[CHN]; \
@@ -644,7 +644,8 @@ run(LV2_Handle handle, uint32_t n_samples)
 			{
 				LTCFrameExt frame;
 				while (ltc_decoder_read(self->decoder,&frame)) {
-					if (frame.off_end >= monotonic_cnt && frame.off_end < monotonic_cnt + n_samples) {
+					const uint64_t ltc_end = frame.off_end;
+					if (ltc_end >= monotonic_cnt && ltc_end < monotonic_cnt + n_samples) {
 						const int nf = frame.off_end - monotonic_cnt;
 						a_o[3][nf] = FIRE_TRIGGER;
 					}
