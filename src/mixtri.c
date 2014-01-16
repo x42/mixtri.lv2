@@ -17,7 +17,9 @@
  * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,7 +128,7 @@ typedef struct {
 } MixTri;
 
 static LV2_Handle
-instantiate(
+instantiate_mixtri(
 		const LV2_Descriptor*     descriptor,
 		double                    rate,
 		const char*               bundle_path,
@@ -227,7 +229,7 @@ connect_port_mixtri(
 }
 
 static void
-run(LV2_Handle handle, uint32_t n_samples)
+run_mixtri(LV2_Handle handle, uint32_t n_samples)
 {
 	MixTri* self = (MixTri*)handle;
 
@@ -697,7 +699,7 @@ run(LV2_Handle handle, uint32_t n_samples)
 }
 
 static void
-cleanup(LV2_Handle handle)
+cleanup_mixtri(LV2_Handle handle)
 {
 	MixTri* self = (MixTri*)handle;
 	ltc_decoder_free(self->decoder);
@@ -705,6 +707,7 @@ cleanup(LV2_Handle handle)
 }
 
 
+#ifdef MIXTRIVERSION
 /******************************************************************************
  * LV2 setup
  */
@@ -718,12 +721,12 @@ extension_data(const char* uri)
 #define mkdesc_mixtri(ID, NAME) \
 static const LV2_Descriptor descriptor ## ID = { \
 	MIXTRI_URI NAME,     \
-	instantiate,         \
+	instantiate_mixtri,  \
 	connect_port_mixtri, \
 	NULL,                \
-	run,                 \
+	run_mixtri,          \
 	NULL,                \
-	cleanup,             \
+	cleanup_mixtri,      \
 	extension_data       \
 };
 
@@ -740,5 +743,6 @@ lv2_descriptor(uint32_t index)
 		default: return NULL;
 	}
 }
+#endif
 
 /* vi:set ts=2 sts=2 sw=2: */

@@ -16,9 +16,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define MTR_URI MIXTRI_URI
-#define MTR_GUI "ui"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -1055,15 +1052,9 @@ static bool cb_set_delay (RobWidget* handle, void *data) {
  * RobWidget
  */
 
-
-static void ui_disable(LV2UI_Handle handle) { }
-static void ui_enable(LV2UI_Handle handle) { }
-
-static RobWidget * toplevel(MixTriUI* ui, void * const top)
+static RobWidget *toplevel_mixtri(MixTriUI* ui)
 {
 	ui->hbox = rob_hbox_new(FALSE, 2);
-	robwidget_make_toplevel(ui->hbox, top);
-	ROBWIDGET_SETNAME(ui->hbox, "mixtri");
 
 	ui->font[0] = pango_font_description_from_string("Mono 8");
 	ui->font[1] = pango_font_description_from_string("Sans 7");
@@ -1076,7 +1067,11 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 	ui->label[4] = robtk_lbl_new("Out Trigger");
 	ui->label[5] = robtk_lbl_new("Gain");
 	ui->label[6] = robtk_lbl_new("Trigger");
+#ifdef MIXTRIVERSION
 	ui->label[7] = robtk_lbl_new("x42 MixTri LV2 " MIXTRIVERSION);
+#else
+	ui->label[7] = robtk_lbl_new("");
+#endif
 	ui->label[8] = robtk_lbl_new("Trig. Settings");
 
 	robtk_lbl_set_alignment(ui->label[0], 0.5, 0.5);
@@ -1310,52 +1305,17 @@ static RobWidget * toplevel(MixTriUI* ui, void * const top)
 
 	rob_hbox_child_pack(ui->hbox, ui->ctable, FALSE, FALSE);
 	return ui->hbox;
+#undef TBLADD
 }
 
 /******************************************************************************
  * LV2
  */
 
-static LV2UI_Handle
-instantiate(
-		void* const               ui_toplevel,
-		const LV2UI_Descriptor*   descriptor,
-		const char*               plugin_uri,
-		const char*               bundle_path,
-		LV2UI_Write_Function      write_function,
-		LV2UI_Controller          controller,
-		RobWidget**               widget,
-		const LV2_Feature* const* features)
-{
-	MixTriUI* ui = (MixTriUI*)calloc(1, sizeof(MixTriUI));
-
-	if (!ui) {
-		fprintf(stderr, "MixTri.lv2 UI: out of memory\n");
-		return NULL;
-	}
-
-	*widget = NULL;
-
-	/* initialize private data structure */
-	ui->write      = write_function;
-	ui->controller = controller;
-
-	*widget = toplevel(ui, ui_toplevel);
-
-	return ui;
-}
-
-static enum LVGLResize
-plugin_scale_mode(LV2UI_Handle handle)
-{
-	return LVGL_LAYOUT_TO_FIT;
-}
-
 static void
-cleanup(LV2UI_Handle handle)
+cleanup_mixtri(LV2UI_Handle handle)
 {
 	MixTriUI* ui = (MixTriUI*)handle;
-	ui_disable(ui);
 
 	for (uint32_t i = 0; i < 12; ++i) {
 		robtk_dial_destroy(ui->dial_mix[i]);
@@ -1402,7 +1362,8 @@ cleanup(LV2UI_Handle handle)
 }
 
 static void
-port_event(LV2UI_Handle handle,
+port_event_mixtri(
+		LV2UI_Handle handle,
 		uint32_t     port,
 		uint32_t     buffer_size,
 		uint32_t     format,
@@ -1468,10 +1429,75 @@ port_event(LV2UI_Handle handle,
 	}
 }
 
-	static const void*
+#ifdef MIXTRIVERSION
+
+#define MTR_URI MIXTRI_URI
+#define MTR_GUI "ui"
+
+/**
+ * standalone robtk GUI
+ */
+static void ui_disable(LV2UI_Handle handle) { }
+static void ui_enable(LV2UI_Handle handle) { }
+
+static LV2UI_Handle
+instantiate(
+		void* const               ui_toplevel,
+		const LV2UI_Descriptor*   descriptor,
+		const char*               plugin_uri,
+		const char*               bundle_path,
+		LV2UI_Write_Function      write_function,
+		LV2UI_Controller          controller,
+		RobWidget**               widget,
+		const LV2_Feature* const* features)
+{
+	MixTriUI* ui = (MixTriUI*)calloc(1, sizeof(MixTriUI));
+
+	if (!ui) {
+		fprintf(stderr, "MixTri.lv2 UI: out of memory\n");
+		return NULL;
+	}
+
+	*widget = NULL;
+
+	/* initialize private data structure */
+	ui->write      = write_function;
+	ui->controller = controller;
+
+	*widget = toplevel_mixtri(ui);
+	robwidget_make_toplevel(ui->hbox, ui_toplevel);
+	ROBWIDGET_SETNAME(ui->hbox, "mixtri");
+
+	return ui;
+}
+
+static enum LVGLResize
+plugin_scale_mode(LV2UI_Handle handle)
+{
+	return LVGL_LAYOUT_TO_FIT;
+}
+
+static void
+cleanup(LV2UI_Handle handle)
+{
+	cleanup_mixtri(handle);
+}
+
+static void
+port_event(
+		LV2UI_Handle handle,
+		uint32_t     port,
+		uint32_t     buffer_size,
+		uint32_t     format,
+		const void*  buffer)
+{
+	port_event_mixtri(handle, port, buffer_size, format, buffer);
+}
+
+static const void*
 extension_data(const char* uri)
 {
 	return NULL;
 }
-
+#endif
 /* vi:set ts=2 sts=2 sw=2: */
