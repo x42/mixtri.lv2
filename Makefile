@@ -77,7 +77,7 @@ ifeq ($(shell pkg-config --exists lv2 || echo no), no)
 endif
 
 ifeq ($(shell pkg-config --exists ltc || echo no), no)
-  $(error "LV2 libltc was not found")
+  $(error "libltc was not found - https://x42.github.io/libltc/")
 endif
 
 ifeq ($(shell pkg-config --atleast-version=1.4 lv2 || echo no), no)
