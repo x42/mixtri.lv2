@@ -1067,8 +1067,9 @@ static RobWidget *toplevel_mixtri(MixTriUI* ui)
 	ui->label[4] = robtk_lbl_new("Out Trigger");
 	ui->label[5] = robtk_lbl_new("Gain");
 	ui->label[6] = robtk_lbl_new("Trigger");
-#ifdef MIXTRIVERSION
-	ui->label[7] = robtk_lbl_new("x42 MixTri LV2 " MIXTRIVERSION);
+	// TODO use robtk_info()
+#ifdef MIXTRILV2
+	ui->label[7] = robtk_lbl_new("x42 MixTri LV2 " VERSION);
 #else
 	ui->label[7] = robtk_lbl_new("");
 #endif
@@ -1429,7 +1430,7 @@ port_event_mixtri(
 	}
 }
 
-#ifdef MIXTRIVERSION
+#ifdef MIXTRILV2
 
 #define MTR_URI MIXTRI_URI
 #define MTR_GUI "ui"

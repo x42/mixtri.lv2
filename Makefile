@@ -4,6 +4,7 @@ OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 
 PREFIX ?= /usr/local
 CFLAGS ?= -g -Wall -Wno-unused-function
 LIBDIR ?= lib
+STRIP  ?= strip
 
 EXTERNALUI?=yes
 KXURI?=yes
@@ -22,6 +23,8 @@ mixtri_VERSION?=$(shell git describe --tags HEAD | sed 's/-g.*$$//;s/^v//' || ec
 #########
 
 LV2UIREQ=
+LV2CFLAGS=$(CFLAGS) -I. -DMIXTRILV2
+JACKCFLAGS=$(CFLAGS) -I.
 GLUICFLAGS=-I.
 GTKUICFLAGS=-I.
 
@@ -29,29 +32,47 @@ UNAME=$(shell uname)
 ifeq ($(UNAME),Darwin)
   LV2LDFLAGS=-dynamiclib
   LIB_EXT=.dylib
+  EXE_EXT=
   UI_TYPE=ui:CocoaUI
   PUGL_SRC=$(RW)pugl/pugl_osx.m
-  PKG_LIBS=
-  GLUILIBS=-framework Cocoa -framework OpenGL
+  PKG_GL_LIBS=
+  GLUILIBS=-framework Cocoa -framework OpenGL -framework CoreFoundation
   BUILDGTK=no
+  STRIPFLAGS=-u -r -arch all -s $(RW)lv2syms
 else
   LV2LDFLAGS=-Wl,-Bstatic -Wl,-Bdynamic
   LIB_EXT=.so
+  EXE_EXT=
   UI_TYPE=ui:X11UI
   PUGL_SRC=$(RW)pugl/pugl_x11.c
-  PKG_LIBS=glu gl
+  PKG_GL_LIBS=glu gl
   GLUILIBS=-lX11
   GLUICFLAGS+=`pkg-config --cflags glu`
+  STRIPFLAGS=-s
+endif
+
+ifneq ($(XWIN),)
+  CC=$(XWIN)-gcc
+  CXX=$(XWIN)-g++
+  LV2LDFLAGS=-Wl,-Bstatic -Wl,-Bdynamic -Wl,--as-needed -lpthread
+  LIB_EXT=.dll
+  EXE_EXT=.exe
+  PUGL_SRC=$(RW)pugl/pugl_win.cpp
+  PKG_GL_LIBS=
+  GLUILIBS=-lws2_32 -lwinmm -lopengl32 -lglu32 -lgdi32 -lcomdlg32 -lpthread
+  BUILDGTK=no
+  GLUICFLAGS=-I.
+  override LDFLAGS += -static-libgcc -static-libstdc++
 endif
 
 ifeq ($(EXTERNALUI), yes)
   ifeq ($(KXURI), yes)
     UI_TYPE=kx:Widget
     LV2UIREQ+=lv2:requiredFeature kx:Widget;
-    override CFLAGS += -DXTERNAL_UI
+    LV2CFLAGS += -DXTERNAL_UI
   else
     LV2UIREQ+=lv2:requiredFeature ui:external;
-    override CFLAGS += -DXTERNAL_UI
+    LV2CFLAGS += -DXTERNAL_UI
     UI_TYPE=ui:external
   endif
 endif
@@ -65,8 +86,12 @@ targets=$(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 ifneq ($(BUILDOPENGL), no)
 targets+=$(BUILDDIR)$(LV2GUI)$(LIB_EXT)
 endif
+
 ifneq ($(BUILDGTK), no)
 targets+=$(BUILDDIR)$(LV2GTK)$(LIB_EXT)
+PKG_GTK_LIBS=glib-2.0 gtk+-2.0
+else
+PKG_GTK_LIBS=
 endif
 
 ###############################################################################
@@ -84,8 +109,8 @@ ifeq ($(shell pkg-config --atleast-version=1.4 lv2 || echo no), no)
   $(error "LV2 SDK needs to be version 1.4 or later")
 endif
 
-ifeq ($(shell pkg-config --exists glib-2.0 gtk+-2.0 pango cairo $(PKG_LIBS) || echo no), no)
-  $(error "This plugin requires cairo, pango, openGL, glib-2.0 and gtk+-2.0")
+ifeq ($(shell pkg-config --exists pango cairo $(PKG_GTK_LIBS) $(PKG_GL_LIBS) || echo no), no)
+  $(error "This plugin requires cairo pango $(PKG_GTK_LIBS) $(PKG_GL_LIBS)")
 endif
 
 ifneq ($(MAKECMDGOALS), submodules)
@@ -107,18 +132,24 @@ ifeq ($(shell pkg-config --atleast-version=1.4.2 lv2 && echo yes), yes)
 endif
 
 # add library dependent flags and libs
-override CFLAGS +=-fPIC $(OPTIMIZATIONS) -DMIXTRIVERSION="\"$(mixtri_VERSION)\""
-override CFLAGS += `pkg-config --cflags lv2`
+LV2CFLAGS += `pkg-config --cflags lv2 ltc`
+LV2CFLAGS += -fPIC $(OPTIMIZATIONS) -DVERSION="\"$(mixtri_VERSION)\""
 
-LV2CFLAGS=$(CFLAGS) `pkg-config --cflags ltc`
-LOADLIBES=`pkg-config --libs ltc` -lm
+LOADLIBES=`pkg-config $(PKG_UI_FLAGS) --libs ltc` -lm
 
-GTKUICFLAGS+=`pkg-config --cflags gtk+-2.0 cairo pango`
+GTKUICFLAGS+= $(LV2CFLAGS) `pkg-config --cflags gtk+-2.0 cairo pango`
 GTKUILIBS+=`pkg-config --libs gtk+-2.0 cairo pango`
 
-GLUICFLAGS+=`pkg-config --cflags cairo pango`
-GLUILIBS+=`pkg-config --libs cairo pango pangocairo $(PKG_LIBS)`
+GLUICFLAGS+= $(LV2CFLAGS) `pkg-config --cflags cairo pango`
+GLUILIBS+=`pkg-config $(PKG_UI_FLAGS) --libs cairo pangocairo pango $(PKG_GL_LIBS)`
+ifneq ($(XWIN),)
+GLUILIBS+=-lpthread -lusp10
+endif
 
+GLUICFLAGS+=$(LIC_CFLAGS)
+GLUILIBS+=$(LIC_LOADLIBES)
+
+GLUICFLAGS+=-DUSE_GUI_THREAD
 ifeq ($(GLTHREADSYNC), yes)
   GLUICFLAGS+=-DTHREADSYNC
 endif
@@ -182,9 +213,10 @@ endif
 
 $(BUILDDIR)$(LV2NAME)$(LIB_EXT): src/mixtri.c src/mixtri.h
 	@mkdir -p $(BUILDDIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LV2CFLAGS) -std=c99 \
+	$(CC) $(CPPFLAGS) $(LV2CFLAGS) -std=c99 \
 	  -o $(BUILDDIR)$(LV2NAME)$(LIB_EXT) src/mixtri.c \
 	  -shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES)
+	$(STRIP) $(STRIPFLAGS) $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
 -include $(RW)robtk.mk
 

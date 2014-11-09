@@ -707,7 +707,7 @@ cleanup_mixtri(LV2_Handle handle)
 }
 
 
-#ifdef MIXTRIVERSION
+#ifdef MIXTRILV2
 /******************************************************************************
  * LV2 setup
  */
@@ -733,6 +733,12 @@ static const LV2_Descriptor descriptor ## ID = { \
 mkdesc_mixtri(0, "lv2")
 mkdesc_mixtri(1, "lv2_gtk")
 
+#undef LV2_SYMBOL_EXPORT
+#ifdef _WIN32
+#    define LV2_SYMBOL_EXPORT __declspec(dllexport)
+#else
+#    define LV2_SYMBOL_EXPORT  __attribute__ ((visibility ("default")))
+#endif
 LV2_SYMBOL_EXPORT
 const LV2_Descriptor*
 lv2_descriptor(uint32_t index)
