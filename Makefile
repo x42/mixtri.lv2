@@ -13,6 +13,7 @@ RW?=robtk/
 LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 
 BUILDDIR=build/
+APPBLD=x42/
 BUNDLE=mixtri.lv2
 
 LV2NAME=mixtri
@@ -113,6 +114,14 @@ ifeq ($(shell pkg-config --exists pango cairo $(PKG_GTK_LIBS) $(PKG_GL_LIBS) || 
   $(error "This plugin requires cairo pango $(PKG_GTK_LIBS) $(PKG_GL_LIBS)")
 endif
 
+# TODO jack-wrapper (not enabled by default, yet
+# need jack and lv2 > =1.4.2 (idle API)
+#
+#ifeq ($(shell pkg-config --exists jack || echo no), no)
+#  $(warning *** libjack from http://jackaudio.org is required)
+#  $(error   Please install libjack-dev or libjack-jackd2-dev)
+#endif
+
 ifneq ($(MAKECMDGOALS), submodules)
   ifeq ($(wildcard $(RW)robtk.mk),)
     $(warning This plugin needs https://github.com/x42/robtk)
@@ -176,6 +185,9 @@ submodules:
 
 all: submodule_check $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl $(targets)
 
+jackapps: \
+	$(APPBLD)x42-mixtri
+
 $(BUILDDIR)manifest.ttl: lv2ttl/manifest.gl.ttl.in lv2ttl/manifest.gtk.ttl.in lv2ttl/manifest.lv2.ttl.in lv2ttl/manifest.ttl.in Makefile
 	@mkdir -p $(BUILDDIR)
 	sed "s/@LV2NAME@/$(LV2NAME)/g;s/@LIB_EXT@/$(LIB_EXT)/g" \
@@ -218,6 +230,18 @@ $(BUILDDIR)$(LV2NAME)$(LIB_EXT): src/mixtri.c src/mixtri.h
 	  -shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES)
 	$(STRIP) $(STRIPFLAGS) $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
+JACKCFLAGS=-I. $(LV2CFLAGS) $(CXXFLAGS) $(LIC_CFLAGS)
+JACKCFLAGS+=`pkg-config --cflags jack lv2 pango pangocairo ltc $(PKG_GL_LIBS)`
+JACKLIBS=-lm $(GLUILIBS) $(LIC_LOADLIBES) `pkg-config $(PKG_UI_FLAGS) --libs ltc`
+
+$(eval x42_mixtri_JACKSRC = src/mixtri.c)
+x42_mixtri_JACKGUI = gui/mixtri.c
+x42_mixtri_LV2HTTL = lv2ttl/mixtri.h
+x42_mixtri_JACKDESC = lv2ui_descriptor
+$(APPBLD)x42-mixtri$(EXE_EXT): src/mixtri.c src/mixtri.h \
+	        $(x42_mixtri_JACKGUI) $(x42_mixtri_LV2HTTL)
+
+
 -include $(RW)robtk.mk
 
 $(BUILDDIR)$(LV2GTK)$(LIB_EXT): gui/mixtri.c src/mixtri.h
@@ -245,10 +269,12 @@ clean:
 	  $(BUILDDIR)$(LV2GUI)$(LIB_EXT)  \
 	  $(BUILDDIR)$(LV2GTK)$(LIB_EXT)
 	rm -rf $(BUILDDIR)*.dSYM
+	rm -rf $(APPBLD)x42-*
+	-test -d $(APPBLD) && rmdir $(APPBLD) || true
 	-test -d $(BUILDDIR) && rmdir $(BUILDDIR) || true
 
 distclean: clean
 	rm -f cscope.out cscope.files tags
 
-.PHONY: clean all install uninstall distclean \
+.PHONY: clean all install uninstall distclean jackapps \
         submodule_check submodules submodule_update submodule_pull
