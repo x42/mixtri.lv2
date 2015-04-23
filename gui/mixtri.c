@@ -110,8 +110,8 @@ static void create_faceplate(MixTriUI *ui) {
 	cairo_line_to(cr, MIX_CX, MIX_HEIGHT-0.5); \
 	cairo_close_path(cr); \
 	cairo_fill(cr); \
-	AMPLABEL(-20, 20., 40., MIX_CX); write_text_full(cr, "-20", font, xlp, ylp, 0, -2, c_wht); \
-	AMPLABEL( 20, 20., 40., MIX_CX); write_text_full(cr, "+20", font, xlp, ylp, 0, -2, c_wht); \
+	AMPLABEL(-20, 20., 40., MIX_CX); write_text_full(cr, "-20", font, xlp, ylp, 0, 2, c_wht); \
+	AMPLABEL( 20, 20., 40., MIX_CX); write_text_full(cr, "+20", font, xlp, ylp, 0, 2, c_wht); \
 	AMPLABEL(  0, 20., 40., MIX_CX); \
 	AMPLABEL(-12, 20., 40., MIX_CX); \
 	AMPLABEL( -6, 20., 40., MIX_CX); \
@@ -170,9 +170,9 @@ static void create_faceplate(MixTriUI *ui) {
 	cairo_close_path(cr);
 	cairo_fill(cr);
 #endif
-	AMPLABEL(  0, 60., 80., 30.5); write_text_full(cr, " 0dB", font, xlp, ylp, 0, -2, c_wht);
-	AMPLABEL( 20, 60., 80., 30.5); write_text_full(cr, "+20", font, xlp, ylp, 0, -2, c_wht);
-	AMPLABEL(-60, 60., 80., 30.5); write_text_full(cr, "-60", font, xlp, ylp, 0, -2, c_wht);
+	AMPLABEL(  0, 60., 80., 30.5); write_text_full(cr, " 0dB", font, xlp, ylp, 0, 2, c_wht);
+	AMPLABEL( 20, 60., 80., 30.5); write_text_full(cr, "+20", font, xlp, ylp, 0, 2, c_wht);
+	AMPLABEL(-60, 60., 80., 30.5); write_text_full(cr, "-60", font, xlp, ylp, 0, 2, c_wht);
 	AMPLABEL(-50, 60., 80., 30.5);
 	AMPLABEL(-40, 60., 80., 30.5);
 	AMPLABEL(-30, 60., 80., 30.5);
