@@ -71,7 +71,7 @@ typedef struct {
 static void create_faceplate(MixTriUI *ui) {
 	cairo_t* cr;
 	float xlp, ylp;
-	PangoFontDescription *font = pango_font_description_from_string("Sans 6");
+	PangoFontDescription *font = pango_font_description_from_string("Sans 8px");
 
 #define AMPLABEL(V, O, T, X) \
 	{ \
@@ -1056,8 +1056,8 @@ static RobWidget *toplevel_mixtri(MixTriUI* ui)
 {
 	ui->hbox = rob_hbox_new(FALSE, 2);
 
-	ui->font[0] = pango_font_description_from_string("Mono 8");
-	ui->font[1] = pango_font_description_from_string("Sans 7");
+	ui->font[0] = pango_font_description_from_string("Mono 10px");
+	ui->font[1] = pango_font_description_from_string("Sans 9px");
 	create_faceplate(ui);
 
 	ui->label[0] = robtk_lbl_new("Delay [spl]");
