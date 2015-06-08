@@ -232,7 +232,6 @@ static void annotation_txt(MixTriUI *ui, RobTkDial * d, cairo_t *cr, const char 
 	rounded_rectangle(cr, -1, -1, tw+3, th+1, 3);
 	cairo_fill(cr);
 	CairoSetSouerceRGBA(c_wht);
-	pango_cairo_layout_path(cr, pl);
 	pango_cairo_show_layout(cr, pl);
 	g_object_unref(pl);
 	cairo_restore(cr);
