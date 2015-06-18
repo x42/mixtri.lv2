@@ -1,17 +1,27 @@
 #!/usr/bin/make -f
 
-OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only -DNDEBUG
+# these can be overridden using make variables. e.g.
+#   make CFLAGS=-O2
+#   make install DESTDIR=$(CURDIR)/debian/meters.lv2 PREFIX=/usr
+#
 PREFIX ?= /usr/local
-CFLAGS ?= -g -Wall -Wno-unused-function
-LIBDIR ?= lib
+BINDIR ?= $(PREFIX)/bin
+MANDIR ?= $(PREFIX)/share/man/man1
+# see http://lv2plug.in/pages/filesystem-hierarchy-standard.html, don't use libdir
+LV2DIR ?= $(PREFIX)/lib/lv2
+
+OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only -DNDEBUG
+CFLAGS ?= -Wall -Wno-unused-function
 STRIP  ?= strip
 
 EXTERNALUI?=yes
 BUILDGTK?=no
 KXURI?=yes
+
+mixtri_VERSION?=$(shell git describe --tags HEAD | sed 's/-g.*$$//;s/^v//' || echo "LV2")
 RW?=robtk/
+
 ###############################################################################
-LV2DIR ?= $(PREFIX)/$(LIBDIR)/lv2
 
 BUILDDIR=build/
 APPBLD=x42/
@@ -21,7 +31,6 @@ LV2NAME=mixtri
 LV2GUI=mixtriUI_gl
 LV2GTK=mixtriUI_gtk
 
-mixtri_VERSION?=$(shell git describe --tags HEAD | sed 's/-g.*$$//;s/^v//' || echo "LV2")
 #########
 
 LV2UIREQ=
@@ -143,7 +152,12 @@ endif
 
 # add library dependent flags and libs
 LV2CFLAGS += `pkg-config --cflags lv2 ltc`
-LV2CFLAGS += -fPIC $(OPTIMIZATIONS) -DVERSION="\"$(mixtri_VERSION)\""
+LV2CFLAGS += $(OPTIMIZATIONS) -DVERSION="\"$(mixtri_VERSION)\""
+ifeq ($(XWIN),)
+LV2CFLAGS += -fPIC -fvisibility=hidden
+else
+LV2CFLAGS += -DPTW32_STATIC_LIB
+endif
 
 LOADLIBES=`pkg-config $(PKG_UI_FLAGS) --libs ltc` -lm
 
@@ -184,7 +198,7 @@ submodule_check:
 submodules:
 	-test -d .git -a .gitmodules -a -f Makefile.git && $(MAKE) -f Makefile.git submodules
 
-all: submodule_check $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl $(targets)
+all: submodule_check $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl $(targets) $(APPBLD)x42-mixtri
 
 jackapps: \
 	$(APPBLD)x42-mixtri
@@ -231,7 +245,7 @@ $(BUILDDIR)$(LV2NAME)$(LIB_EXT): src/mixtri.c src/mixtri.h
 	  -shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES)
 	$(STRIP) $(STRIPFLAGS) $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
-JACKCFLAGS=-I. $(LV2CFLAGS) $(CXXFLAGS) $(LIC_CFLAGS)
+JACKCFLAGS=-I. $(LV2CFLAGS) $(CFLAGS) $(LIC_CFLAGS)
 JACKCFLAGS+=`pkg-config --cflags jack lv2 pango pangocairo ltc $(PKG_GL_LIBS)`
 JACKLIBS=-lm $(GLUILIBS) $(LIC_LOADLIBES) `pkg-config $(PKG_UI_FLAGS) --libs ltc`
 
@@ -251,18 +265,37 @@ $(BUILDDIR)$(LV2GUI)$(LIB_EXT): gui/mixtri.c src/mixtri.h
 ###############################################################################
 # install/uninstall/clean target definitions
 
-install: all
+install: install-bin install-man
+
+uninstall: uninstall-bin uninstall-man
+
+install-bin: all
 	install -d $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 	install -m755 $(targets) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 	install -m644 $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	install -d $(DESTDIR)$(BINDIR)
+	install -m755 $(APPBLD)x42-mixtri $(DESTDIR)$(BINDIR)
 
-uninstall:
+uninstall-bin:
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/manifest.ttl
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2NAME).ttl
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2NAME)$(LIB_EXT)
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2GUI)$(LIB_EXT)
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2GTK)$(LIB_EXT)
+	rm -f $(DESTDIR)$(BINDIR)/x42-mixtri
 	-rmdir $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	-rmdir $(DESTDIR)$(BINDIR)
+
+install-man:
+	install -d $(DESTDIR)$(MANDIR)
+	install -m644 x42-mixtri.1 $(DESTDIR)$(MANDIR)
+
+uninstall-man:
+	rm -f $(DESTDIR)$(MANDIR)/x42-mixtri.1
+	-rmdir $(DESTDIR)$(MANDIR)
+
+man: $(APPBLD)x42-mixtri
+	help2man -N -o x42-mixtri.1 -n "JACK Mixer'n'Trigger" $(APPBLD)x42-mixtri
 
 clean:
 	rm -f $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl \
@@ -278,4 +311,5 @@ distclean: clean
 	rm -f cscope.out cscope.files tags
 
 .PHONY: clean all install uninstall distclean jackapps \
+        install-bin uninstall-bin install-man uninstall-man \
         submodule_check submodules submodule_update submodule_pull

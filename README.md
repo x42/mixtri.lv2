@@ -18,16 +18,13 @@ gtk+2.0, libpango, libcairo and openGL (sometimes called: glu, glx, mesa).
   make submodules
   make
   sudo make install PREFIX=/usr
-  
-  # test run
-  jalv.gtk 'http://gareus.org/oss/lv2/mixtri#lv2_gtk'
-  
-	# jalv with external-ui patch:
-  jalv.gtk 'http://gareus.org/oss/lv2/mixtri#lv2'
 ```
 
 Note to packagers: The Makefile honors `PREFIX` and `DESTDIR` variables as well
-as `CFLAGS`, `LDFLAGS` and `OPTIMIZATIONS` (additions to `CFLAGS`).
+as `CFLAGS`, `LDFLAGS` and `OPTIMIZATIONS` (additions to `CFLAGS`), also
+see the first 10 lines of the Makefile.
+You really want to package the superset of [x42-plugins](https://github.com/x42/x42-plugins).
+
 
 Screenshots
 -----------
