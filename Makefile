@@ -50,6 +50,7 @@ ifeq ($(UNAME),Darwin)
   GLUILIBS=-framework Cocoa -framework OpenGL -framework CoreFoundation
   BUILDGTK=no
   STRIPFLAGS=-u -r -arch all -s $(RW)lv2syms
+  EXTENDED_RE=-E
 else
   LV2LDFLAGS=-Wl,-Bstatic -Wl,-Bdynamic
   LIB_EXT=.so
@@ -60,6 +61,7 @@ else
   GLUILIBS=-lX11
   GLUICFLAGS+=`pkg-config --cflags glu`
   STRIPFLAGS=-s
+  EXTENDED_RE=-r
 endif
 
 ifneq ($(XWIN),)
@@ -106,6 +108,11 @@ PKG_GTK_LIBS=
 endif
 
 ###############################################################################
+# extract versions
+LV2VERSION=$(mixtri_VERSION)
+include git2lv2.mk
+
+###############################################################################
 # check for build-dependencies
 
 ifeq ($(shell pkg-config --exists lv2 || echo no), no)
@@ -122,6 +129,11 @@ endif
 
 ifeq ($(shell pkg-config --exists pango cairo $(PKG_GTK_LIBS) $(PKG_GL_LIBS) || echo no), no)
   $(error "This plugin requires cairo pango $(PKG_GTK_LIBS) $(PKG_GL_LIBS)")
+endif
+
+# check for lv2_atom_forge_object  new in 1.8.1 deprecates lv2_atom_forge_blank
+ifeq ($(shell pkg-config --atleast-version=1.8.1 lv2 && echo yes), yes)
+  override CFLAGS += -DHAVE_LV2_1_8
 endif
 
 # TODO jack-wrapper (not enabled by default, yet
@@ -227,13 +239,13 @@ $(BUILDDIR)$(LV2NAME).ttl: lv2ttl/$(LV2NAME).ttl.in lv2ttl/$(LV2NAME).lv2.ttl.in
 ifneq ($(BUILDOPENGL), no)
 	sed "s/@LV2NAME@/$(LV2NAME)/g;s/@UI_URI_SUFFIX@/_gl/;s/@UI_TYPE@/$(UI_TYPE)/;s/@UI_REQ@/$(LV2UIREQ)/;s/@URI_SUFFIX@//g" \
 	    lv2ttl/$(LV2NAME).gui.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
-	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@URI_SUFFIX@//g;s/@NAME_SUFFIX@//g;s/@UI@/ui_gl/g" \
+	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@URI_SUFFIX@//g;s/@NAME_SUFFIX@//g;s/@UI@/ui_gl/g;s/@VERSION@/lv2:microVersion $(LV2MIC) ;lv2:minorVersion $(LV2MIN) ;/g" \
 	  lv2ttl/$(LV2NAME).lv2.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
 endif
 ifneq ($(BUILDGTK), no)
 	sed "s/@LV2NAME@/$(LV2NAME)/g;s/@UI_URI_SUFFIX@/_gtk/;s/@UI_TYPE@/ui:GtkUI/;s/@UI_REQ@//;s/@URI_SUFFIX@/_gtk/g" \
 	    lv2ttl/$(LV2NAME).gui.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
-	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@URI_SUFFIX@/_gtk/g;s/@NAME_SUFFIX@/ GTK/g;s/@UI@/ui_gtk/g" \
+	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@URI_SUFFIX@/_gtk/g;s/@NAME_SUFFIX@/ GTK/g;s/@UI@/ui_gtk/g;s/@VERSION@/lv2:microVersion $(LV2MIC) ;lv2:minorVersion $(LV2MIN) ;/g" \
 	  lv2ttl/$(LV2NAME).lv2.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
 endif
 

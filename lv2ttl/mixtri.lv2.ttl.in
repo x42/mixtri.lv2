@@ -5,6 +5,7 @@
   doap:license <http://usefulinc.com/doap/licenses/gpl> ;
   doap:maintainer <http://gareus.org/rgareus#me> ;
   doap:name "Mixer'n'Trigger@NAME_SUFFIX@";
+  @VERSION@
   lv2:optionalFeature lv2:hardRTCapable ;
   ui:ui @LV2NAME@:@UI@ ;
   lv2:port
