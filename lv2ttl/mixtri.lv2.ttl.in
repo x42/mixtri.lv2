@@ -243,9 +243,9 @@
     lv2:index 24 ;
     lv2:symbol "delay_in_0" ;
     lv2:name "Delay input 0" ;
-    lv2:minimum  0.0;
-    lv2:maximum  48000.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  48000;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -253,9 +253,9 @@
     lv2:index 25 ;
     lv2:symbol "delay_in_1" ;
     lv2:name "Delay input 1" ;
-    lv2:minimum  0.0;
-    lv2:maximum  48000.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  48000;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -263,9 +263,9 @@
     lv2:index 26 ;
     lv2:symbol "delay_in_2" ;
     lv2:name "Delay input 2" ;
-    lv2:minimum  0.0;
-    lv2:maximum  48000.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  48000;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -273,9 +273,9 @@
     lv2:index 27 ;
     lv2:symbol "delay_in_3" ;
     lv2:name "Delay input 3" ;
-    lv2:minimum  0.0;
-    lv2:maximum  48000.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  48000;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -283,9 +283,9 @@
     lv2:index 28 ;
     lv2:symbol "delay_out_0" ;
     lv2:name "Delay output 0" ;
-    lv2:minimum  0.0;
-    lv2:maximum  48000.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  48000;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -293,9 +293,9 @@
     lv2:index 29 ;
     lv2:symbol "delay_out_1" ;
     lv2:name "Delay output 1" ;
-    lv2:minimum  0.0;
-    lv2:maximum  48000.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  48000;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -303,9 +303,9 @@
     lv2:index 30 ;
     lv2:symbol "delay_out_2" ;
     lv2:name "Delay output 2" ;
-    lv2:minimum  0.0;
-    lv2:maximum  48000.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  48000;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -313,65 +313,65 @@
     lv2:index 31 ;
     lv2:symbol "mod_in_0" ;
     lv2:name "Input 0 Mode" ;
-    lv2:minimum  0.0;
-    lv2:maximum  3.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  3;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
     lv2:portProperty lv2:enumeration ;
-    lv2:scalePoint [ rdfs:label "none"; rdf:value 0.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "mute"; rdf:value 1.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "high-pass filter"; rdf:value 2.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "none"; rdf:value 0 ; ] ;
+    lv2:scalePoint [ rdfs:label "mute"; rdf:value 1 ; ] ;
+    lv2:scalePoint [ rdfs:label "high-pass filter"; rdf:value 2 ; ] ;
   ] , [
     a lv2:ControlPort ,
       lv2:InputPort ;
     lv2:index 32 ;
     lv2:symbol "mod_in_1" ;
     lv2:name "Input 1 Mode" ;
-    lv2:minimum  0.0;
-    lv2:maximum  3.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  3;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
     lv2:portProperty lv2:enumeration ;
-    lv2:scalePoint [ rdfs:label "none"; rdf:value 0.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "mute"; rdf:value 1.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "high-pass filter"; rdf:value 2.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "none"; rdf:value 0 ; ] ;
+    lv2:scalePoint [ rdfs:label "mute"; rdf:value 1 ; ] ;
+    lv2:scalePoint [ rdfs:label "high-pass filter"; rdf:value 2 ; ] ;
   ] , [
     a lv2:ControlPort ,
       lv2:InputPort ;
     lv2:index 33 ;
     lv2:symbol "mod_in_2" ;
     lv2:name "Input 2 Mode" ;
-    lv2:minimum  0.0;
-    lv2:maximum  3.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  3;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
     lv2:portProperty lv2:enumeration ;
-    lv2:scalePoint [ rdfs:label "none"; rdf:value 0.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "mute"; rdf:value 1.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "high-pass filter"; rdf:value 2.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "none"; rdf:value 0 ; ] ;
+    lv2:scalePoint [ rdfs:label "mute"; rdf:value 1 ; ] ;
+    lv2:scalePoint [ rdfs:label "high-pass filter"; rdf:value 2 ; ] ;
   ] , [
     a lv2:ControlPort ,
       lv2:InputPort ;
     lv2:index 34 ;
     lv2:symbol "mod_in_3" ;
     lv2:name "Input 3 Mode" ;
-    lv2:minimum  0.0;
-    lv2:maximum  3.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  3;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
     lv2:portProperty lv2:enumeration ;
-    lv2:scalePoint [ rdfs:label "none"; rdf:value 0.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "mute"; rdf:value 1.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "high-pass filter"; rdf:value 2.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "none"; rdf:value 0 ; ] ;
+    lv2:scalePoint [ rdfs:label "mute"; rdf:value 1 ; ] ;
+    lv2:scalePoint [ rdfs:label "high-pass filter"; rdf:value 2 ; ] ;
   ] , [
     a lv2:ControlPort ,
       lv2:InputPort ;
     lv2:index 35 ;
     lv2:symbol "trigger_channel" ;
     lv2:name "Trigger Channel" ;
-    lv2:minimum  0.0;
-    lv2:maximum  3.0;
-    lv2:default  3.0;
+    lv2:minimum  0;
+    lv2:maximum  3;
+    lv2:default  3;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -379,38 +379,38 @@
     lv2:index 36;
     lv2:symbol "trigger_mode" ;
     lv2:name "Trigger Mode" ;
-    lv2:minimum  0.0;
-    lv2:maximum  12.0;
-    lv2:default  0.0;
+    lv2:minimum  0;
+    lv2:maximum  12;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
     lv2:portProperty lv2:enumeration ;
-    lv2:scalePoint [ rdfs:label "passtru"; rdf:value 0.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "LTC"; rdf:value 1.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Edge"; rdf:value 2.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Pulsewidth"; rdf:value 3.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Pulsetrain"; rdf:value 4.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Window enter"; rdf:value 5.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Window leave"; rdf:value 6.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Hysteresis"; rdf:value 7.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Runt"; rdf:value 8.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Dropout"; rdf:value 9.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "Drop-in"; rdf:value 10.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "RMS"; rdf:value 11.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "LPF"; rdf:value 12.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "passtru"; rdf:value 0 ; ] ;
+    lv2:scalePoint [ rdfs:label "LTC"; rdf:value 1 ; ] ;
+    lv2:scalePoint [ rdfs:label "Edge"; rdf:value 2 ; ] ;
+    lv2:scalePoint [ rdfs:label "Pulsewidth"; rdf:value 3 ; ] ;
+    lv2:scalePoint [ rdfs:label "Pulsetrain"; rdf:value 4 ; ] ;
+    lv2:scalePoint [ rdfs:label "Window enter"; rdf:value 5 ; ] ;
+    lv2:scalePoint [ rdfs:label "Window leave"; rdf:value 6 ; ] ;
+    lv2:scalePoint [ rdfs:label "Hysteresis"; rdf:value 7 ; ] ;
+    lv2:scalePoint [ rdfs:label "Runt"; rdf:value 8 ; ] ;
+    lv2:scalePoint [ rdfs:label "Dropout"; rdf:value 9 ; ] ;
+    lv2:scalePoint [ rdfs:label "Drop-in"; rdf:value 10 ; ] ;
+    lv2:scalePoint [ rdfs:label "RMS"; rdf:value 11 ; ] ;
+    lv2:scalePoint [ rdfs:label "LPF"; rdf:value 12 ; ] ;
   ] , [
     a lv2:ControlPort ,
       lv2:InputPort ;
     lv2:index 37;
     lv2:symbol "trigger_edge" ;
     lv2:name "Trigger Edge Mode" ;
-    lv2:minimum  1.0;
-    lv2:maximum  3.0;
-    lv2:default  1.0;
+    lv2:minimum  1;
+    lv2:maximum  3;
+    lv2:default  1;
     lv2:portProperty lv2:integer ;
     lv2:portProperty lv2:enumeration ;
-    lv2:scalePoint [ rdfs:label "rising-edge"; rdf:value 1.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "falling-edge"; rdf:value 2.0 ; ] ;
-    lv2:scalePoint [ rdfs:label "any-edge"; rdf:value 3.0 ; ] ;
+    lv2:scalePoint [ rdfs:label "rising-edge"; rdf:value 1 ; ] ;
+    lv2:scalePoint [ rdfs:label "falling-edge"; rdf:value 2 ; ] ;
+    lv2:scalePoint [ rdfs:label "any-edge"; rdf:value 3 ; ] ;
   ] , [
     a lv2:ControlPort ,
       lv2:InputPort ;
@@ -435,9 +435,9 @@
     lv2:index 40;
     lv2:symbol "trigger_time1" ;
     lv2:name "Trigger time1" ;
-    lv2:minimum  0.0;
+    lv2:minimum  0;
     lv2:maximum  192000;
-    lv2:default  0.0;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] , [
     a lv2:ControlPort ,
@@ -445,9 +445,9 @@
     lv2:index 41;
     lv2:symbol "trigger_time2" ;
     lv2:name "Trigger time2" ;
-    lv2:minimum  0.0;
+    lv2:minimum  0;
     lv2:maximum  192000;
-    lv2:default  0.0;
+    lv2:default  0;
     lv2:portProperty lv2:integer ;
   ] ;
   rdfs:comment "Matrix mixer with trigger intended for sisco.lv2." ;
