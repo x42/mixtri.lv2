@@ -25,6 +25,14 @@ as `CFLAGS`, `LDFLAGS` and `OPTIMIZATIONS` (additions to `CFLAGS`), also
 see the first 10 lines of the Makefile.
 You really want to package the superset of [x42-plugins](https://github.com/x42/x42-plugins).
 
+Usage
+-------
+```bash
+# Just run the stand-alone app
+x42-mixtri
+# Some info
+man x42-mixtri
+```
 
 Screenshots
 -----------
