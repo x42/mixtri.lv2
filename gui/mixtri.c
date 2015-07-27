@@ -1062,7 +1062,7 @@ static RobWidget *toplevel_mixtri(MixTriUI* ui)
 	ui->label[0] = robtk_lbl_new("Delay [spl]");
 	ui->label[1] = robtk_lbl_new("Output Delay [spl] \u2192 ");
 	ui->label[2] = robtk_lbl_new("Mixer Matrix [amp]");
-	ui->label[3] = robtk_lbl_new("Chnannel mod.");
+	ui->label[3] = robtk_lbl_new("Channel mod.");
 	ui->label[4] = robtk_lbl_new("Out Trigger");
 	ui->label[5] = robtk_lbl_new("Gain");
 	ui->label[6] = robtk_lbl_new("Trigger");
