@@ -370,6 +370,7 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 				} \
 				self->dly_ ## IO[CHN].r_ptr = self->dly_ ## IO[CHN].r_ptr % MAXDELAY; \
 				self->dly_ ## IO[CHN].c_dly = delay_ ## IO[CHN]; \
+				OUT = 0; \
 			} \
 			if (n >= fade_ ## IO[CHN]) { \
 				/* fade in at new position */ \
