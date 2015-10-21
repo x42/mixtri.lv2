@@ -7,7 +7,7 @@
   doap:name "Mixer'n'Trigger@NAME_SUFFIX@";
   @VERSION@
   lv2:optionalFeature lv2:hardRTCapable ;
-  ui:ui @LV2NAME@:@UI@ ;
+  @UIDEF@ @LV2NAME@:@UI@ ;
   lv2:port
   [
     a lv2:AudioPort ,
