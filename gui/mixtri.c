@@ -1431,8 +1431,8 @@ port_event_mixtri(
 
 #ifdef MIXTRILV2
 
-#define MTR_URI MIXTRI_URI
-#define MTR_GUI "ui"
+#define RTK_URI MIXTRI_URI
+#define RTK_GUI "ui"
 
 /**
  * standalone robtk GUI
