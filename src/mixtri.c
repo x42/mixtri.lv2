@@ -323,28 +323,6 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 		}
 	}
 
-	/** prepare trigger output **/
-	switch (trigger_mode) {
-		case TRG_LTC:
-		case TRG_EDGE:
-		case TRG_PULSEWIDTH:
-		case TRG_PULSETRAIN:
-		case TRG_WINDOW_ENTER:
-		case TRG_WINDOW_LEAVE:
-		case TRG_HYSTERESIS:
-		case TRG_RUNT:
-		case TRG_DROPIN:
-		case TRG_DROPOUT:
-			/* clear channel */
-			memset(a_o[3], 0, sizeof(float) * n_samples);
-			break;
-		case TRG_PASSTRHU:
-		case TRG_RMS:
-		case TRG_LPF:
-		default:
-			break;
-	}
-
 	/* process every sample */
 	for (uint32_t n = 0; n < n_samples; ++n) {
 		float d_i[4], d_o[4], ain[4];
@@ -420,76 +398,86 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 		PREFILTER(ain, d_i, 2)
 		PREFILTER(ain, d_i, 3)
 
+		bool clear = true;
+		const float tin = d_i[trigger_chn];
+
 		/* process trigger */
 		switch (trigger_mode) {
 			case TRG_EDGE:
-				if (edge_trigger(tt_edgemode, tt_level0, ts_prev, d_i[trigger_chn])) {
+				if (edge_trigger(tt_edgemode, tt_level0, ts_prev, tin)) {
 					a_o[3][n] = FIRE_TRIGGER;
+					clear = false;
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_LTC:
 				ltc_decoder_write_float(self->decoder, &d_i[trigger_chn], 1, n + monotonic_cnt);
+				clear = false;
 				break;
 			case TRG_PULSEWIDTH:
 				/* - prev. edge-trigger is between min,max time ago
 				 * % trigger-level, edge-mode, time min,max
 				 */
-				if (edge_trigger(tt_edgemode, tt_level0, ts_prev, d_i[trigger_chn])) {
+				if (edge_trigger(tt_edgemode, tt_level0, ts_prev, tin)) {
 					if (monotonic_cnt + n >= ts_time + tt_tme0 && monotonic_cnt + n <= ts_time + tt_tme1) {
 						a_o[3][n] = FIRE_TRIGGER;
+						clear = false;
 					}
 					ts_time = monotonic_cnt + n;
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_PULSETRAIN:
 				/* - no trigger for a given time (max)
 				 * - more than one trigger for given time (min)
 				 * % trigger-level, edge-mode, time min,max
 				 */
-				if (edge_trigger(tt_edgemode, tt_level0, ts_prev, d_i[trigger_chn])) {
+				if (edge_trigger(tt_edgemode, tt_level0, ts_prev, tin)) {
 					if (monotonic_cnt + n < ts_time + tt_tme0) {
 						a_o[3][n] = FIRE_TRIGGER;
+						clear = false;
 					}
 					ts_time = monotonic_cnt + n;
 				}
 				if (monotonic_cnt + n > ts_time + tt_tme1 ) {
 					a_o[3][n] = FIRE_TRIGGER;
 					ts_time = 1e18; // XXX screws up above < tme0 !?
+					clear = false;
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_WINDOW_ENTER:
 				/* - fire is signal enters a given range
 				 * % trigger-level A, trigger-level B, enter||leave
 				 */
 				{
-					const int rt = range_trigger(tt_level0, tt_level1, ts_prev, d_i[trigger_chn]);
+					const int rt = range_trigger(tt_level0, tt_level1, ts_prev, tin);
 					if ((rt&4) == 0 && (rt & tt_edgemode) != 0) {
 						a_o[3][n] = FIRE_TRIGGER;
+						clear = false;
 					}
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_WINDOW_LEAVE:
 				/* - fire is signal leaves a certain range
 				 * % trigger-level A, trigger-level B, enter||leave
 				 */
 				{
-					const int rt = range_trigger(tt_level0, tt_level1, ts_prev, d_i[trigger_chn]);
+					const int rt = range_trigger(tt_level0, tt_level1, ts_prev, tin);
 					if ((rt&4) == 4 && (rt & tt_edgemode) != 0) {
 						a_o[3][n] = FIRE_TRIGGER;
+						clear = false;
 					}
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_DROPOUT:
 				/* - fire is signal leaves a given range for at least a given time
 				 * % trigger-level A, trigger-level B, enter||leave, timeout
 				 */
 				{
-					const int rt = range_trigger(tt_level0, tt_level1, ts_prev, d_i[trigger_chn]);
+					const int rt = range_trigger(tt_level0, tt_level1, ts_prev, tin);
 					if ((rt&4) == 4 && (rt & tt_edgemode) != 0) {
 						ts_time = monotonic_cnt + n;
 					}
@@ -497,15 +485,16 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 				if (monotonic_cnt + n > ts_time + tt_tme0) {
 					a_o[3][n] = FIRE_TRIGGER;
 					ts_time = 1e18;
+					clear = false;
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_DROPIN:
 				/* - fire is signal enters a given range for at least a given time
 				 * % trigger-level A, trigger-level B, enter||leave, timeout
 				 */
 				{
-					const int rt = range_trigger(tt_level0, tt_level1, ts_prev, d_i[trigger_chn]);
+					const int rt = range_trigger(tt_level0, tt_level1, ts_prev, tin);
 					if ((rt&4) == 0 && (rt & tt_edgemode) != 0) {
 						// in range -- start counting (if not counting already)
 						if (ts_time == 0) {
@@ -519,8 +508,9 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 				if (ts_time > 0 && monotonic_cnt + n >= ts_time + tt_tme0) {
 					a_o[3][n] = FIRE_TRIGGER;
 					ts_time = 1e18;
+					clear = false;
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_HYSTERESIS:
 				/* - fire if signal cross both min,max in same direction w/o interruption
@@ -530,19 +520,20 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 				if (tt_edgemode & 1) { // rising edge
 					if ((ts_hysteresis & 1) == 0) {
 						// check first edge
-						if (edge_trigger(1, tt_level0, ts_prev, d_i[trigger_chn])) {
+						if (edge_trigger(1, tt_level0, ts_prev, tin)) {
 							ts_hysteresis |= 1;
 						}
 					}
 					else if ((ts_hysteresis & 1) == 1) {
 						// check 2nd edge -- or inverse 1st edge -> reset
-						if (edge_trigger(1, tt_level1, ts_prev, d_i[trigger_chn])) {
+						if (edge_trigger(1, tt_level1, ts_prev, tin)) {
 							// fire
 							ts_hysteresis &= ~1;
 							a_o[3][n] = FIRE_TRIGGER;
+							clear = false;
 						}
 						else
-						if (edge_trigger(2, tt_level0, ts_prev, d_i[trigger_chn])) {
+						if (edge_trigger(2, tt_level0, ts_prev, tin)) {
 							ts_hysteresis &= ~1;
 						}
 					}
@@ -551,24 +542,25 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 				if (tt_edgemode & 2) { // falling edge
 					if ((ts_hysteresis & 2) == 0) {
 						// check first edge
-						if (edge_trigger(2, tt_level1, ts_prev, d_i[trigger_chn])) {
+						if (edge_trigger(2, tt_level1, ts_prev, tin)) {
 							ts_hysteresis |= 2;
 						}
 					}
 					else if ((ts_hysteresis & 2) == 2) {
 						// check 2nd edge -- or inverse 1st edge -> reset
-						if (edge_trigger(2, tt_level0, ts_prev, d_i[trigger_chn])) {
+						if (edge_trigger(2, tt_level0, ts_prev, tin)) {
 							// fire
 							ts_hysteresis &= ~2;
 							a_o[3][n] = FIRE_TRIGGER;
+							clear = false;
 						}
 						else
-						if (edge_trigger(1, tt_level1, ts_prev, d_i[trigger_chn])) {
+						if (edge_trigger(1, tt_level1, ts_prev, tin)) {
 							ts_hysteresis &= ~2;
 						}
 					}
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_RUNT:
 				/* - fire is signal crosses 1st but not 2nd threshold
@@ -577,12 +569,12 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 				if (tt_edgemode & 1) { // rising edge
 					if ((ts_hysteresis & 1) == 0) {
 						// check first edge
-						if (edge_trigger(1, tt_level0, ts_prev, d_i[trigger_chn])) {
+						if (edge_trigger(1, tt_level0, ts_prev, tin)) {
 							ts_hysteresis |= 1;
 						}
 					}
 					else if ((ts_hysteresis & 1) == 1) {
-						int rt = range_trigger(tt_level0, tt_level1, ts_prev, d_i[trigger_chn]);
+						int rt = range_trigger(tt_level0, tt_level1, ts_prev, tin);
 						//assert (rt & 4);
 						if (rt & 2) {
 							ts_hysteresis &= ~1;
@@ -595,34 +587,41 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 				if (tt_edgemode & 2) { // falling edge
 					if ((ts_hysteresis & 2) == 0) {
 						// check first edge
-						if (edge_trigger(2, tt_level1, ts_prev, d_i[trigger_chn])) {
+						if (edge_trigger(2, tt_level1, ts_prev, tin)) {
 							ts_hysteresis |= 2;
 						}
 					}
 					else if ((ts_hysteresis & 2) == 2) {
-						int rt = range_trigger(tt_level0, tt_level1, ts_prev, d_i[trigger_chn]);
+						int rt = range_trigger(tt_level0, tt_level1, ts_prev, tin);
 						//assert (rt & 4);
 						if (rt & 1) {
 							ts_hysteresis &= ~2;
 							a_o[3][n] = FIRE_TRIGGER;
+							clear = false;
 						} else if (rt & 2) {
 							ts_hysteresis &= ~2;
 						}
 					}
 				}
-				ts_prev = d_i[trigger_chn];
+				ts_prev = tin;
 				break;
 			case TRG_RMS:
-				ts_prev += tri_alpha * ((d_i[trigger_chn] * d_i[trigger_chn]) - ts_prev);
+				ts_prev += tri_alpha * ((tin * tin) - ts_prev);
 				a_o[3][n] = sqrtf(ts_prev);
+				clear = false;
 				break;
 			case TRG_LPF:
-				ts_prev += tri_alpha * (d_i[trigger_chn] - ts_prev);
+				ts_prev += tri_alpha * (tin - ts_prev);
 				a_o[3][n] = ts_prev;
+				clear = false;
 				break;
 			default:
-				a_o[3][n] = d_i[trigger_chn];
+				a_o[3][n] = tin;
+				clear = false;
 				break;
+		}
+		if (clear) {
+			a_o[3][n] = 0;
 		}
 
 		for (uint32_t i = 0; i < 12; ++i) {
