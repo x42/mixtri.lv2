@@ -1261,7 +1261,7 @@ static RobWidget *toplevel_mixtri(MixTriUI* ui)
 
 	ui->sel_trig_edge = robtk_select_new();
 	robtk_select_add_item(ui->sel_trig_edge, 1, "rising edge");
-	robtk_select_add_item(ui->sel_trig_edge, 2, "falling egde");
+	robtk_select_add_item(ui->sel_trig_edge, 2, "falling edge");
 	robtk_select_add_item(ui->sel_trig_edge, 3, "any edge");
 	robtk_select_set_callback(ui->sel_trig_edge, cb_set_trig_edge, ui);
 	TBLADD(robtk_select_widget(ui->sel_trig_edge), 10, 12, 1);
