@@ -291,6 +291,7 @@ uninstall: uninstall-bin uninstall-man
 install-bin: all
 	install -d $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 	install -m644 $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl $(DESTDIR)$(LV2DIR)/$(BUNDLE)
+	install -m755 $(BUILDDIR)$(LV2NAME)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 ifneq ($(BUILDOPENGL), no)
 	install -m755 $(BUILDDIR)$(LV2GUI)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 endif
