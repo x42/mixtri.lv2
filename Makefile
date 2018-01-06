@@ -266,7 +266,7 @@ $(BUILDDIR)$(LV2NAME)$(LIB_EXT): src/mixtri.c src/mixtri.h
 
 JACKCFLAGS=-I. $(LV2CFLAGS) $(CFLAGS) $(LIC_CFLAGS)
 JACKCFLAGS+=`pkg-config --cflags jack lv2 pango pangocairo ltc $(PKG_GL_LIBS)`
-JACKLIBS=-lm $(GLUILIBS) $(LIC_LOADLIBES) `pkg-config $(PKG_UI_FLAGS) --libs ltc`
+JACKLIBS=-lm $(GLUILIBS) `pkg-config $(PKG_UI_FLAGS) --libs ltc`
 
 $(eval x42_mixtri_JACKSRC = src/mixtri.c)
 x42_mixtri_JACKGUI = gui/mixtri.c
