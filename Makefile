@@ -12,6 +12,8 @@ LV2DIR ?= $(PREFIX)/lib/lv2
 
 OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only -DNDEBUG
 CFLAGS ?= -Wall -Wno-unused-function
+
+PKG_CONFIG?=pkg-config
 STRIP  ?= strip
 
 EXTERNALUI?=yes
@@ -59,7 +61,7 @@ else
   PUGL_SRC=$(RW)pugl/pugl_x11.c
   PKG_GL_LIBS=glu gl
   GLUILIBS=-lX11
-  GLUICFLAGS+=`pkg-config --cflags glu` -pthread
+  GLUICFLAGS+=`$(PKG_CONFIG) --cflags glu` -pthread
   STRIPFLAGS=-s
   EXTENDED_RE=-r
 endif
@@ -116,28 +118,28 @@ include git2lv2.mk
 ###############################################################################
 # check for build-dependencies
 
-ifeq ($(shell pkg-config --exists lv2 || echo no), no)
+ifeq ($(shell $(PKG_CONFIG) --exists lv2 || echo no), no)
   $(error "LV2 SDK was not found")
 endif
 
-ifeq ($(shell pkg-config --exists ltc || echo no), no)
+ifeq ($(shell $(PKG_CONFIG) --exists ltc || echo no), no)
   $(error "libltc was not found - https://x42.github.io/libltc/")
 endif
 
-ifeq ($(shell pkg-config --atleast-version=1.6.0 lv2 || echo no), no)
+ifeq ($(shell $(PKG_CONFIG) --atleast-version=1.6.0 lv2 || echo no), no)
   $(error "LV2 SDK needs to be version 1.6.0 or later")
 endif
 
-ifeq ($(shell pkg-config --exists pango cairo $(PKG_GTK_LIBS) $(PKG_GL_LIBS) || echo no), no)
+ifeq ($(shell $(PKG_CONFIG) --exists pango cairo $(PKG_GTK_LIBS) $(PKG_GL_LIBS) || echo no), no)
   $(error "This plugin requires cairo pango $(PKG_GTK_LIBS) $(PKG_GL_LIBS)")
 endif
 
 # check for lv2_atom_forge_object  new in 1.8.1 deprecates lv2_atom_forge_blank
-ifeq ($(shell pkg-config --atleast-version=1.8.1 lv2 && echo yes), yes)
+ifeq ($(shell $(PKG_CONFIG) --atleast-version=1.8.1 lv2 && echo yes), yes)
   override CFLAGS += -DHAVE_LV2_1_8
 endif
 
-ifeq ($(shell pkg-config --exists jack || echo no), no)
+ifeq ($(shell $(PKG_CONFIG) --exists jack || echo no), no)
   $(warning *** libjack from http://jackaudio.org is required)
   $(error   Please install libjack-dev or libjack-jackd2-dev)
 endif
@@ -159,7 +161,7 @@ GTKUICFLAGS+=-DHAVE_IDLE_IFACE
 LV2UIREQ+=lv2:requiredFeature ui:idleInterface; lv2:extensionData ui:idleInterface;
 
 # add library dependent flags and libs
-LV2CFLAGS += `pkg-config --cflags lv2 ltc`
+LV2CFLAGS += `$(PKG_CONFIG) --cflags lv2 ltc`
 LV2CFLAGS += $(OPTIMIZATIONS) -DVERSION="\"$(mixtri_VERSION)\""
 ifeq ($(XWIN),)
 LV2CFLAGS += -fPIC -fvisibility=hidden
@@ -167,13 +169,13 @@ else
 LV2CFLAGS += -DPTW32_STATIC_LIB
 endif
 
-LOADLIBES=`pkg-config $(PKG_UI_FLAGS) --libs ltc` -lm
+LOADLIBES=`$(PKG_CONFIG) $(PKG_UI_FLAGS) --libs ltc` -lm
 
-GTKUICFLAGS+= $(LV2CFLAGS) `pkg-config --cflags gtk+-2.0 cairo pango`
-GTKUILIBS+=`pkg-config --libs gtk+-2.0 cairo pango`
+GTKUICFLAGS+= $(LV2CFLAGS) `$(PKG_CONFIG) --cflags gtk+-2.0 cairo pango`
+GTKUILIBS+=`$(PKG_CONFIG) --libs gtk+-2.0 cairo pango`
 
-GLUICFLAGS+= $(LV2CFLAGS) `pkg-config --cflags cairo pango`
-GLUILIBS+=`pkg-config $(PKG_UI_FLAGS) --libs cairo pangocairo pango $(PKG_GL_LIBS)`
+GLUICFLAGS+= $(LV2CFLAGS) `$(PKG_CONFIG) --cflags cairo pango`
+GLUILIBS+=`$(PKG_CONFIG) $(PKG_UI_FLAGS) --libs cairo pangocairo pango $(PKG_GL_LIBS)`
 ifneq ($(XWIN),)
 GLUILIBS+=-lpthread -lusp10
 endif
@@ -265,8 +267,8 @@ $(BUILDDIR)$(LV2NAME)$(LIB_EXT): src/mixtri.c src/mixtri.h
 	$(STRIP) $(STRIPFLAGS) $(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
 JACKCFLAGS=-I. $(LV2CFLAGS) $(CFLAGS) $(LIC_CFLAGS)
-JACKCFLAGS+=`pkg-config --cflags jack lv2 pango pangocairo ltc $(PKG_GL_LIBS)`
-JACKLIBS=-lm $(GLUILIBS) `pkg-config $(PKG_UI_FLAGS) --libs ltc`
+JACKCFLAGS+=`$(PKG_CONFIG) --cflags jack lv2 pango pangocairo ltc $(PKG_GL_LIBS)`
+JACKLIBS=-lm $(GLUILIBS) `$(PKG_CONFIG) $(PKG_UI_FLAGS) --libs ltc`
 
 $(eval x42_mixtri_JACKSRC = src/mixtri.c)
 x42_mixtri_JACKGUI = gui/mixtri.c
