@@ -1168,6 +1168,7 @@ static RobWidget *toplevel_mixtri(MixTriUI* ui)
 
 		ui->spb_delay_in[i]  = robtk_spin_new(0, MAXDELAY-1, 1);
 		ui->spb_delay_in[i]->dial->displaymode = 3;
+		robtk_lbl_set_text(ui->spb_delay_in[i]->lbl_r, "000000");
 		robtk_spin_set_default(ui->spb_delay_in[i], 0);
 		robtk_spin_set_value(ui->spb_delay_in[i], 0);
 		robtk_spin_set_callback(ui->spb_delay_in[i], cb_set_delay, ui);
