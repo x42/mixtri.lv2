@@ -17,7 +17,6 @@ PKG_CONFIG?=pkg-config
 STRIP  ?= strip
 
 EXTERNALUI?=yes
-BUILDGTK?=no
 KXURI?=yes
 
 mixtri_VERSION?=$(shell git describe --tags HEAD | sed 's/-g.*$$//;s/^v//' || echo "LV2")
@@ -31,7 +30,6 @@ BUNDLE=mixtri.lv2
 
 LV2NAME=mixtri
 LV2GUI=mixtriUI_gl
-LV2GTK=mixtriUI_gtk
 
 #########
 
@@ -39,7 +37,6 @@ LV2UIREQ=
 LV2CFLAGS=$(CFLAGS) -I. -DMIXTRILV2
 JACKCFLAGS=$(CFLAGS) -I.
 GLUICFLAGS=-I.
-GTKUICFLAGS=-I.
 
 UNAME=$(shell uname)
 ifeq ($(UNAME),Darwin)
@@ -50,7 +47,6 @@ ifeq ($(UNAME),Darwin)
   PUGL_SRC=$(RW)pugl/pugl_osx.m
   PKG_GL_LIBS=
   GLUILIBS=-framework Cocoa -framework OpenGL -framework CoreFoundation
-  BUILDGTK=no
   STRIPFLAGS=-u -r -arch all -s $(RW)lv2syms
   EXTENDED_RE=-E
 else
@@ -76,7 +72,6 @@ ifneq ($(XWIN),)
   PKG_GL_LIBS=
   UI_TYPE=ui:WindowsUI
   GLUILIBS=-lws2_32 -lwinmm -lopengl32 -lglu32 -lgdi32 -lcomdlg32 -lpthread
-  BUILDGTK=no
   GLUICFLAGS=-I.
   override LDFLAGS += -static-libgcc -static-libstdc++
 endif
@@ -93,21 +88,10 @@ ifeq ($(EXTERNALUI), yes)
   endif
 endif
 
-#ifeq ($(BUILDOPENGL)$(BUILDGTK), nono)
-#  $(error at least one of gtk or openGL needs to be enabled)
-#endif
-
 targets=$(BUILDDIR)$(LV2NAME)$(LIB_EXT)
 
 ifneq ($(BUILDOPENGL), no)
 targets+=$(BUILDDIR)$(LV2GUI)$(LIB_EXT)
-endif
-
-ifneq ($(BUILDGTK), no)
-targets+=$(BUILDDIR)$(LV2GTK)$(LIB_EXT)
-PKG_GTK_LIBS=glib-2.0 gtk+-2.0
-else
-PKG_GTK_LIBS=
 endif
 
 ###############################################################################
@@ -130,8 +114,8 @@ ifeq ($(shell $(PKG_CONFIG) --atleast-version=1.6.0 lv2 || echo no), no)
   $(error "LV2 SDK needs to be version 1.6.0 or later")
 endif
 
-ifeq ($(shell $(PKG_CONFIG) --exists pango cairo $(PKG_GTK_LIBS) $(PKG_GL_LIBS) || echo no), no)
-  $(error "This plugin requires cairo pango $(PKG_GTK_LIBS) $(PKG_GL_LIBS)")
+ifeq ($(shell $(PKG_CONFIG) --exists pango cairo $(PKG_GL_LIBS) || echo no), no)
+  $(error "This plugin requires cairo pango $(PKG_GL_LIBS)")
 endif
 
 # check for lv2_atom_forge_object  new in 1.8.1 deprecates lv2_atom_forge_blank
@@ -157,7 +141,6 @@ endif
 
 # lv2 >= 1.6.0
 GLUICFLAGS+=-DHAVE_IDLE_IFACE
-GTKUICFLAGS+=-DHAVE_IDLE_IFACE
 LV2UIREQ+=lv2:requiredFeature ui:idleInterface; lv2:extensionData ui:idleInterface;
 
 # add library dependent flags and libs
@@ -170,9 +153,6 @@ LV2CFLAGS += -DPTW32_STATIC_LIB
 endif
 
 LOADLIBES=`$(PKG_CONFIG) $(PKG_UI_FLAGS) --libs ltc` -lm
-
-GTKUICFLAGS+= $(LV2CFLAGS) `$(PKG_CONFIG) --cflags gtk+-2.0 cairo pango`
-GTKUILIBS+=`$(PKG_CONFIG) --libs gtk+-2.0 cairo pango`
 
 GLUICFLAGS+= $(LV2CFLAGS) `$(PKG_CONFIG) --cflags cairo pango`
 GLUILIBS+=`$(PKG_CONFIG) $(PKG_UI_FLAGS) --libs cairo pangocairo pango $(PKG_GL_LIBS)`
@@ -189,8 +169,6 @@ ifeq ($(GLTHREADSYNC), yes)
 endif
 
 ROBGL+= Makefile
-ROBGTK += Makefile
-
 
 ###############################################################################
 # build target definitions
@@ -219,21 +197,11 @@ $(BUILDDIR)manifest.ttl: lv2ttl/manifest.gl.ttl.in lv2ttl/manifest.gtk.ttl.in lv
 	@mkdir -p $(BUILDDIR)
 	sed "s/@LV2NAME@/$(LV2NAME)/g;s/@LIB_EXT@/$(LIB_EXT)/g" \
 	    lv2ttl/manifest.ttl.in > $(BUILDDIR)manifest.ttl
-ifneq ($(BUILDOPENGL), no)
 	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@LIB_EXT@/$(LIB_EXT)/g;s/@URI_SUFFIX@//g" \
 	    lv2ttl/manifest.lv2.ttl.in >> $(BUILDDIR)manifest.ttl
+ifneq ($(BUILDOPENGL), no)
 	sed "s/@LV2NAME@/$(LV2NAME)/g;s/@LIB_EXT@/$(LIB_EXT)/g;s/@UI_TYPE@/$(UI_TYPE)/;s/@LV2GUI@/$(LV2GUI)/g" \
 	    lv2ttl/manifest.gl.ttl.in >> $(BUILDDIR)manifest.ttl
-endif
-ifneq ($(BUILDGTK), no)
-	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@LIB_EXT@/$(LIB_EXT)/g;s/@URI_SUFFIX@/_gtk/g" \
-	    lv2ttl/manifest.lv2.ttl.in >> $(BUILDDIR)manifest.ttl
-	sed "s/@LV2NAME@/$(LV2NAME)/g;s/@LIB_EXT@/$(LIB_EXT)/g;s/@LV2GTK@/$(LV2GTK)/g" \
-	    lv2ttl/manifest.gtk.ttl.in >> $(BUILDDIR)manifest.ttl
-endif
-ifeq ($(BUILDOPENGL)$(BUILDGTK), nono)
-	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@LIB_EXT@/$(LIB_EXT)/g;s/@URI_SUFFIX@//g" \
-	    lv2ttl/manifest.lv2.ttl.in >> $(BUILDDIR)manifest.ttl
 endif
 
 
@@ -246,18 +214,10 @@ ifneq ($(BUILDOPENGL), no)
 	    lv2ttl/$(LV2NAME).gui.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
 	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@URI_SUFFIX@//g;s/@NAME_SUFFIX@//g;s/@UIDEF@/ui:ui/;s/@UI@/ui_gl/g;s/@VERSION@/lv2:microVersion $(LV2MIC) ;lv2:minorVersion $(LV2MIN) ;/g" \
 	  lv2ttl/$(LV2NAME).lv2.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
-endif
-ifneq ($(BUILDGTK), no)
-	sed "s/@LV2NAME@/$(LV2NAME)/g;s/@UI_URI_SUFFIX@/_gtk/;s/@UI_TYPE@/ui:GtkUI/;s/@UI_REQ@//;s/@URI_SUFFIX@/_gtk/g" \
-	    lv2ttl/$(LV2NAME).gui.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
-	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@URI_SUFFIX@/_gtk/g;s/@NAME_SUFFIX@/ GTK/g;s/@UIDEF@/ui:ui/;s/@UI@/ui_gtk/g;s/@VERSION@/lv2:microVersion $(LV2MIC) ;lv2:minorVersion $(LV2MIN) ;/g" \
-	  lv2ttl/$(LV2NAME).lv2.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
-endif
-ifeq ($(BUILDOPENGL)$(BUILDGTK), nono)
+else
 	sed "s/@INSTANCE@/lv2/g;s/@LV2NAME@/$(LV2NAME)/g;s/@URI_SUFFIX@//g;s/@NAME_SUFFIX@//g;s/@UIDEF@/#/;s/@UI@//g;s/@VERSION@/lv2:microVersion $(LV2MIC) ;lv2:minorVersion $(LV2MIN) ;/g" \
 	  lv2ttl/$(LV2NAME).lv2.ttl.in >> $(BUILDDIR)$(LV2NAME).ttl
 endif
-
 
 $(BUILDDIR)$(LV2NAME)$(LIB_EXT): src/mixtri.c src/mixtri.h
 	@mkdir -p $(BUILDDIR)
@@ -280,7 +240,6 @@ $(APPBLD)x42-mixtri$(EXE_EXT): src/mixtri.c src/mixtri.h \
 
 -include $(RW)robtk.mk
 
-$(BUILDDIR)$(LV2GTK)$(LIB_EXT): gui/mixtri.c src/mixtri.h
 $(BUILDDIR)$(LV2GUI)$(LIB_EXT): gui/mixtri.c src/mixtri.h
 
 ###############################################################################
@@ -297,9 +256,6 @@ install-bin: all
 ifneq ($(BUILDOPENGL), no)
 	install -m755 $(BUILDDIR)$(LV2GUI)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 endif
-ifneq ($(BUILDGTK), no)
-	install -m755 $(BUILDDIR)$(LV2GTK)$(LIB_EXT) $(DESTDIR)$(LV2DIR)/$(BUNDLE)
-endif
 	install -d $(DESTDIR)$(BINDIR)
 	install -m755 $(APPBLD)x42-mixtri$(EXE_EXT) $(DESTDIR)$(BINDIR)
 
@@ -308,7 +264,6 @@ uninstall-bin:
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2NAME).ttl
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2NAME)$(LIB_EXT)
 	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2GUI)$(LIB_EXT)
-	rm -f $(DESTDIR)$(LV2DIR)/$(BUNDLE)/$(LV2GTK)$(LIB_EXT)
 	rm -f $(DESTDIR)$(BINDIR)/x42-mixtri$(EXE_EXT)
 	-rmdir $(DESTDIR)$(LV2DIR)/$(BUNDLE)
 	-rmdir $(DESTDIR)$(BINDIR)
@@ -328,7 +283,6 @@ clean:
 	rm -f $(BUILDDIR)manifest.ttl $(BUILDDIR)$(LV2NAME).ttl \
 	  $(BUILDDIR)$(LV2NAME)$(LIB_EXT) \
 	  $(BUILDDIR)$(LV2GUI)$(LIB_EXT)  \
-	  $(BUILDDIR)$(LV2GTK)$(LIB_EXT)
 	rm -rf $(BUILDDIR)*.dSYM
 	rm -rf $(APPBLD)x42-*
 	-test -d $(APPBLD) && rmdir $(APPBLD) || true

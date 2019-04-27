@@ -159,7 +159,7 @@ static void create_faceplate(MixTriUI *ui) {
 	cairo_move_to(cr, 0, MIX_CY);
 	cairo_line_to(cr, 60, MIX_CY);
 	cairo_stroke(cr);
-#ifndef GTK_BACKEND
+
 	cairo_move_to(cr, 6.5, MIX_CY-3.5);
 	cairo_line_to(cr, 6.5, MIX_CY+3.5);
 	cairo_line_to(cr, 12.5, MIX_CY);
@@ -169,7 +169,7 @@ static void create_faceplate(MixTriUI *ui) {
 	cairo_line_to(cr, 60-1.5, MIX_CY);
 	cairo_close_path(cr);
 	cairo_fill(cr);
-#endif
+
 	AMPLABEL(  0, 60., 80., 30.5); write_text_full(cr, " 0dB", font, xlp, ylp, 0, 2, c_wht);
 	AMPLABEL( 20, 60., 80., 30.5); write_text_full(cr, "+20", font, xlp, ylp, 0, 2, c_wht);
 	AMPLABEL(-60, 60., 80., 30.5); write_text_full(cr, "-60", font, xlp, ylp, 0, 2, c_wht);
@@ -262,7 +262,6 @@ static void dial_annotation_db(RobTkDial * d, cairo_t *cr, void *data) {
 	annotation_txt(ui, d, cr, tmp);
 }
 
-#ifndef GTK_BACKEND
 static bool box_expose_event(RobWidget* rw, cairo_t* cr, cairo_rectangle_t *ev) {
 	if (rw->resized) {
 		cairo_rectangle_t event;
@@ -332,7 +331,6 @@ static bool box_expose_event(RobWidget* rw, cairo_t* cr, cairo_rectangle_t *ev) 
 	}
 	return rcontainer_expose_event_no_clear(rw, cr, ev);
 }
-#endif
 
 static void draw_arrow (cairo_t *cr, float x, float y, bool down) {
 	cairo_save(cr);
@@ -1087,9 +1085,7 @@ static RobWidget *toplevel_mixtri(MixTriUI* ui)
 	robtk_lbl_set_color(ui->label[7], .6, .6, .6, 1.0);
 
 	ui->ctable = rob_table_new(/*rows*/7, /*cols*/ 9, FALSE);
-#ifndef GTK_BACKEND
 	ui->ctable->expose_event = box_expose_event;
-#endif
 
 	rob_table_attach(ui->ctable, robtk_lbl_widget(ui->label[0]),
 			1, 2, 0, 1, 0, 0, RTK_EXANDF, RTK_SHRINK);
@@ -1176,12 +1172,12 @@ static RobWidget *toplevel_mixtri(MixTriUI* ui)
 		robtk_spin_set_value(ui->spb_delay_in[i], 0);
 		robtk_spin_set_callback(ui->spb_delay_in[i], cb_set_delay, ui);
 		robtk_spin_label_width(ui->spb_delay_in[i], -1, MIX_WIDTH - GSP_WIDTH - 8);
-#ifndef GTK_BACKEND
+
 		robtk_dial_set_surface(ui->spb_delay_in[i]->dial,ui->delayI);
 		robtk_lbl_set_alignment(ui->spb_delay_in[i]->lbl_r, 0, 0.3);
 		robtk_dial_set_alignment(ui->spb_delay_in[i]->dial, .5, 1.0);
 		ui->spb_delay_in[i]->rw->yalign = .45;
-#endif
+
 		rob_table_attach(ui->ctable, robtk_spin_widget(ui->spb_delay_in[i]),
 				1, 2, i+1, i+2, 0, 0, RTK_EXANDF, RTK_SHRINK);
 	}
@@ -1199,10 +1195,8 @@ static RobWidget *toplevel_mixtri(MixTriUI* ui)
 		robtk_spin_set_callback(ui->spb_delay_out[i], cb_set_delay, ui);
 		robtk_spin_set_default(ui->spb_delay_out[i], 0);
 		robtk_spin_set_value(ui->spb_delay_out[i], 0);
-#ifndef GTK_BACKEND
 		robtk_dial_set_surface(ui->spb_delay_out[i]->dial,ui->delayO);
 		robtk_lbl_set_alignment(ui->spb_delay_out[i]->lbl_r, 0, 0.3);
-#endif
 		robtk_spin_label_width(ui->spb_delay_out[i], -1, MIX_WIDTH - GSP_WIDTH - 8);
 		rob_table_attach(ui->ctable, robtk_spin_widget(ui->spb_delay_out[i]),
 				i+5, i+6, 5, 6, 0, 0, RTK_EXANDF, RTK_SHRINK);
