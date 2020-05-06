@@ -412,7 +412,6 @@ run_mixtri(LV2_Handle handle, uint32_t n_samples)
 				break;
 			case TRG_LTC:
 				ltc_decoder_write_float(self->decoder, &d_i[trigger_chn], 1, n + monotonic_cnt);
-				clear = false;
 				break;
 			case TRG_PULSEWIDTH:
 				/* - prev. edge-trigger is between min,max time ago
