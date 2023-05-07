@@ -29,7 +29,12 @@
 #include <math.h>
 #include <ltc.h>
 
-#include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+#ifdef HAVE_LV2_1_18_6
+#include <lv2/core/lv2.h>
+#else
+#include <lv2/lv2plug.in/ns/lv2core/lv2.h>
+#endif
+
 #include "mixtri.h"
 
 #ifndef MIN
